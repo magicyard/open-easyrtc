@@ -34,31 +34,33 @@
 */
 
 (function (root, factory) {
-    if (typeof define === 'function' && define.amd) {
-        //RequireJS (AMD) build system
-        define(['easyrtc_lang', 'webrtc-adapter', 'socket.io'], factory);
-    } else if (typeof module === 'object' && module.exports) {
-        //CommonJS build system
-        module.exports = factory(require('easyrtc_lang'), require('webrtc-adapter'), require('socket.io'));
-    } else {
-        //Vanilla JS, ensure dependencies are loaded correctly
-        if (typeof window.io === 'undefined' || !window.io) {
-            throw new Error("easyrtc requires socket.io");
-        }
-        root.easyrtc = factory(window.easyrtc_lang, window.adapter, window.io);
+  if (typeof define === "function" && define.amd) {
+    //RequireJS (AMD) build system
+    define(["easyrtc_lang", "webrtc-adapter", "socket.io"], factory);
+  } else if (typeof module === "object" && module.exports) {
+    //CommonJS build system
+    module.exports = factory(
+      require("easyrtc_lang"),
+      require("webrtc-adapter"),
+      require("socket.io")
+    );
+  } else {
+    //Vanilla JS, ensure dependencies are loaded correctly
+    if (typeof window.io === "undefined" || !window.io) {
+      throw new Error("easyrtc requires socket.io");
+    }
+    root.easyrtc = factory(window.easyrtc_lang, window.adapter, window.io);
   }
-}(this, function (easyrtc_lang, adapter, io, undefined) {
-
-"use strict";
-/**
- * @class Easyrtc.
- *
- * @returns {Easyrtc} the new easyrtc instance.
- *
- * @constructs Easyrtc
- */
-var Easyrtc = function() {
-
+})(this, function (easyrtc_lang, adapter, io, undefined) {
+  "use strict";
+  /**
+   * @class Easyrtc.
+   *
+   * @returns {Easyrtc} the new easyrtc instance.
+   *
+   * @constructs Easyrtc
+   */
+  var Easyrtc = function () {
     var self = this;
     var peerConns = {};
     var stillAliveTimer = null;
@@ -66,45 +68,53 @@ var Easyrtc = function() {
     var missedAliveResponses = 0;
 
     function stillAliveEmitter() {
-        if( !stillAlivePeriod ) {
-            return;
-        }
-        if( stillAliveTimer ) {
-           clearTimeout(stillAliveTimer);
-        }
+      if (!stillAlivePeriod) {
+        return;
+      }
+      if (stillAliveTimer) {
+        clearTimeout(stillAliveTimer);
+      }
 
-        if( missedAliveResponses === 1 ) {
-            self.showError(self.errCodes.SYSTEM_ERR, "Timed out trying to talk to the server.");
-            self.printpeerconns();
-            self.hangupAll();
-            self.disconnect();
-            return;
-        }
-        stillAliveTimer = setTimeout(stillAliveEmitter, 20*1000);
-        missedAliveResponses++;
-        sendSignalling(null, "stillAlive", {}, function(msgType, msgData){
-             missedAliveResponses = 0;
-         }, function() {
-           });
+      if (missedAliveResponses === 1) {
+        self.showError(
+          self.errCodes.SYSTEM_ERR,
+          "Timed out trying to talk to the server."
+        );
+        self.printpeerconns();
+        self.hangupAll();
+        self.disconnect();
+        return;
+      }
+      stillAliveTimer = setTimeout(stillAliveEmitter, 20 * 1000);
+      missedAliveResponses++;
+      sendSignalling(
+        null,
+        "stillAlive",
+        {},
+        function (msgType, msgData) {
+          missedAliveResponses = 0;
+        },
+        function () {}
+      );
     }
 
-    function logDebug (message, obj) {
-        if (self.debugPrinter) {
-            self.debugPrinter(message, obj);
-        }
+    function logDebug(message, obj) {
+      if (self.debugPrinter) {
+        self.debugPrinter(message, obj);
+      }
     }
 
     function isEmptyObj(obj) {
-        if (obj === null || obj === undefined) {
-            return true;
-        }
-        var key;
-        for (key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                return false;
-            }
-        }
+      if (obj === null || obj === undefined) {
         return true;
+      }
+      var key;
+      for (key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          return false;
+        }
+      }
+      return true;
     }
 
     /** @private */
@@ -119,9 +129,9 @@ var Easyrtc = function() {
     var iceConnectionStateChangeListener = null;
     var signalingStateChangeListener = null;
     /** @private */
-    var connectionOptions =  {
-        'connect timeout': 10000,
-        'force new connection': true
+    var connectionOptions = {
+      "connect timeout": 10000,
+      "force new connection": true,
     };
 
     /** @private */
@@ -129,27 +139,27 @@ var Easyrtc = function() {
     // this function replaces the deprecated MediaStream.stop method
     //
     function stopStream(stream) {
-       var i;
-       var tracks;
+      var i;
+      var tracks;
 
-       tracks = stream.getAudioTracks();
-       for( i = 0; i < tracks.length; i++ ) {
-           try {
-             tracks[i].stop();
-           } catch(err){}
-       }
-       tracks = stream.getVideoTracks();
-       for( i = 0; i < tracks.length; i++ ) {
-           try {
-             tracks[i].stop();
-           } catch(err){}
-       }
+      tracks = stream.getAudioTracks();
+      for (i = 0; i < tracks.length; i++) {
+        try {
+          tracks[i].stop();
+        } catch (err) {}
+      }
+      tracks = stream.getVideoTracks();
+      for (i = 0; i < tracks.length; i++) {
+        try {
+          tracks[i].stop();
+        } catch (err) {}
+      }
 
-       if (typeof stream.stop === 'function') {
-           try {
-             stream.stop();
-           } catch(err){}
-       }
+      if (typeof stream.stop === "function") {
+        try {
+          stream.stop();
+        } catch (err) {}
+      }
     }
 
     /**
@@ -159,25 +169,25 @@ var Easyrtc = function() {
      * @param {Function} localFilter a function that takes an sdp string and returns an sdp string.
      * @param {Function} remoteFilter a function that takes an sdp string and returns an sdp string.
      */
-    this.setSdpFilters = function(localFilter, remoteFilter) {
-        sdpLocalFilter = localFilter;
-        sdpRemoteFilter = remoteFilter;
+    this.setSdpFilters = function (localFilter, remoteFilter) {
+      sdpLocalFilter = localFilter;
+      sdpRemoteFilter = remoteFilter;
     };
 
     /**
      * Sets a function to warn about the peer connection closing.
      *  @param {Function} handler: a function that gets an easyrtcid as an argument.
      */
-    this.setPeerClosedListener = function( handler ) {
-       this.onPeerClosed = handler;
+    this.setPeerClosedListener = function (handler) {
+      this.onPeerClosed = handler;
     };
 
     /**
      * Sets a function to warn about the peer connection open.
      *  @param {Function} handler: a function that gets an easyrtcid as an argument.
      */
-    this.setPeerOpenListener = function( handler ) {
-       this.onPeerOpen = handler;
+    this.setPeerOpenListener = function (handler) {
+      this.onPeerOpen = handler;
     };
 
     /**
@@ -186,9 +196,9 @@ var Easyrtc = function() {
      *  @param {Function} failingHandler: a function that gets an easyrtcid as an argument.
      *  @param {Function} recoveredHandler: a function that gets an easyrtcid as an argument.
      */
-    this.setPeerFailingListener = function( failingHandler, recoveredHandler ) {
-       this.onPeerFailing = failingHandler;
-       this.onPeerRecovered = recoveredHandler;
+    this.setPeerFailingListener = function (failingHandler, recoveredHandler) {
+      this.onPeerFailing = failingHandler;
+      this.onPeerRecovered = recoveredHandler;
     };
 
     /**
@@ -203,8 +213,8 @@ var Easyrtc = function() {
      * candidate should be discarded).
      * @param {Function} filter
      */
-    this.setIceCandidateFilter = function(filter) {
-        iceCandidateFilter = filter;
+    this.setIceCandidateFilter = function (filter) {
+      iceCandidateFilter = filter;
     };
 
     /**
@@ -215,8 +225,8 @@ var Easyrtc = function() {
      * The function should accept three parameters: the easyrtc id of the peer, the iceconnectionstatechange event target and the iceconnectionstate.
      * @param {Function} listener
      */
-    this.setIceConnectionStateChangeListener = function(listener) {
-       iceConnectionStateChangeListener = listener;
+    this.setIceConnectionStateChangeListener = function (listener) {
+      iceConnectionStateChangeListener = listener;
     };
 
     /**
@@ -226,8 +236,8 @@ var Easyrtc = function() {
      * The function should accept three parameters: the easyrtc id of the peer, the signalingstatechange event target and the signalingstate.
      * @param {Function} listener
      */
-    this.setSignalingStateChangeListener = function(listener) {
-       signalingStateChangeListener = listener;
+    this.setSignalingStateChangeListener = function (listener) {
+      signalingStateChangeListener = listener;
     };
 
     /**
@@ -237,8 +247,8 @@ var Easyrtc = function() {
      * accept  callback.
      * @param {Boolean} flag true to allocate a default local media stream.
      */
-    this.setAutoInitUserMedia = function(flag) {
-        autoInitUserMedia = !!flag;
+    this.setAutoInitUserMedia = function (flag) {
+      autoInitUserMedia = !!flag;
     };
 
     /**
@@ -251,15 +261,14 @@ var Easyrtc = function() {
      * @param {String} arg3 The value that replaces {3}
      * @returns {String} the formatted string.
      */
-    this.format = function(format, arg1, arg2, arg3) {
-        var formatted = arguments[0];
-        for (var i = 1; i < arguments.length; i++) {
-            var regexp = new RegExp('\\{' + (i - 1) + '\\}', 'gi');
-            formatted = formatted.replace(regexp, arguments[i]);
-        }
-        return formatted;
+    this.format = function (format, arg1, arg2, arg3) {
+      var formatted = arguments[0];
+      for (var i = 1; i < arguments.length; i++) {
+        var regexp = new RegExp("\\{" + (i - 1) + "\\}", "gi");
+        formatted = formatted.replace(regexp, arguments[i]);
+      }
+      return formatted;
     };
-
 
     //
     // this private method handles adding a stream to a peer connection.
@@ -267,28 +276,27 @@ var Easyrtc = function() {
     // tracks.
     //
     function addStreamToPeerConnection(stream, peerConnection) {
-       if( peerConnection.addStream ) {
-           var existingStreams = peerConnection.getLocalStreams();
-           if (existingStreams.indexOf(stream) === -1) {
-              peerConnection.addStream(stream);
-           }
-       }
-       else {
-          var existingTracks = peerConnection.getSenders();
-          var tracks = stream.getAudioTracks();
-          var i;
-          for( i = 0; i < tracks.length; i++ ) {
-            if (existingTracks.indexOf(tracks[i]) === -1) {
-             peerConnection.addTrack( tracks[i]);
-            }
+      if (peerConnection.addStream) {
+        var existingStreams = peerConnection.getLocalStreams();
+        if (existingStreams.indexOf(stream) === -1) {
+          peerConnection.addStream(stream);
+        }
+      } else {
+        var existingTracks = peerConnection.getSenders();
+        var tracks = stream.getAudioTracks();
+        var i;
+        for (i = 0; i < tracks.length; i++) {
+          if (existingTracks.indexOf(tracks[i]) === -1) {
+            peerConnection.addTrack(tracks[i]);
           }
-          tracks = stream.getVideoTracks();
-          for( i = 0; i < tracks.length; i++ ) {
-            if (existingTracks.indexOf(tracks[i]) === -1) {
-             peerConnection.addTrack( tracks[i]);
-            }
+        }
+        tracks = stream.getVideoTracks();
+        for (i = 0; i < tracks.length; i++) {
+          if (existingTracks.indexOf(tracks[i]) === -1) {
+            peerConnection.addTrack(tracks[i]);
           }
-       }
+        }
+      }
     }
 
     /** This method is used to trigger renegotiation, which is how you
@@ -298,51 +306,67 @@ var Easyrtc = function() {
      * @param otherUser the easyrtcid of the peer corresponding to the
      *  connection being updated.
      */
-    this.renegotiate = function(otherUser, iceRestart) {
-        var peerConnObj =  peerConns[otherUser];
-        if(!peerConnObj) {
-            logDebug("Attempt to renegotiate ice on nonexistant connection");
-            return;
-        }
-        var callFailureCB = peerConnObj.callFailureCB || self.showError;
-        var pc = peerConnObj.pc;
+    this.renegotiate = function (otherUser, iceRestart) {
+      var peerConnObj = peerConns[otherUser];
+      if (!peerConnObj) {
+        logDebug("Attempt to renegotiate ice on nonexistant connection");
+        return;
+      }
+      var callFailureCB = peerConnObj.callFailureCB || self.showError;
+      var pc = peerConnObj.pc;
 
-        var setLocalAndSendMessage0 = function(sessionDescription) {
-            if (peerConnObj.cancelled) {
-                logDebug('renegotiate.setLocalAndSendMessage0.ignored', peerConnObj.cancelled, peerConnObj.sendingOffer);
-                return;
-            }
-            var sendOffer = function() {
-                peerConnObj.sendingOffer = false;
-                sendSignalling(otherUser, "offer", sessionDescription, null, callFailureCB);
-            };
-            if (sdpLocalFilter) {
-                sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
-            }
-            pc.setLocalDescription(sessionDescription).then(sendOffer, function(errorText) {
-                peerConnObj.sendingOffer = false;
-                callFailureCB(self.errCodes.CALL_ERR, errorText);
-            });
+      var setLocalAndSendMessage0 = function (sessionDescription) {
+        if (peerConnObj.cancelled) {
+          logDebug(
+            "renegotiate.setLocalAndSendMessage0.ignored",
+            peerConnObj.cancelled,
+            peerConnObj.sendingOffer
+          );
+          return;
+        }
+        var sendOffer = function () {
+          peerConnObj.sendingOffer = false;
+          sendSignalling(
+            otherUser,
+            "offer",
+            sessionDescription,
+            null,
+            callFailureCB
+          );
         };
-
-        if (peerConnObj.sendingOffer) {
-            logDebug('initiateSendOffer.setLocalAndSendMessage0.ignored', peerConnObj.sendingOffer);
-            return;
+        if (sdpLocalFilter) {
+          sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
         }
+        pc.setLocalDescription(sessionDescription).then(
+          sendOffer,
+          function (errorText) {
+            peerConnObj.sendingOffer = false;
+            callFailureCB(self.errCodes.CALL_ERR, errorText);
+          }
+        );
+      };
 
-        if (typeof iceRestart === 'undefined') {
-            iceRestart = pc.iceConnectionState !== 'connected';
-        }
+      if (peerConnObj.sendingOffer) {
+        logDebug(
+          "initiateSendOffer.setLocalAndSendMessage0.ignored",
+          peerConnObj.sendingOffer
+        );
+        return;
+      }
 
-        logDebug('iceRestart:' + iceRestart);
+      if (typeof iceRestart === "undefined") {
+        iceRestart = pc.iceConnectionState !== "connected";
+      }
 
-        peerConnObj.sendingOffer = true;
-        pc.createOffer({iceRestart: iceRestart }).then(setLocalAndSendMessage0)
-          .catch(function(reason) {
-                 peerConnObj.sendingOffer = false;
-                 callFailureCB(self.errCodes.CALL_ERR, JSON.stringify(reason));
-           });
+      logDebug("iceRestart:" + iceRestart);
 
+      peerConnObj.sendingOffer = true;
+      pc.createOffer({ iceRestart: iceRestart })
+        .then(setLocalAndSendMessage0)
+        .catch(function (reason) {
+          peerConnObj.sendingOffer = false;
+          callFailureCB(self.errCodes.CALL_ERR, JSON.stringify(reason));
+        });
     };
 
     /**
@@ -350,11 +374,12 @@ var Easyrtc = function() {
      * @private
      * @param {Object} socket a socket.io socket.
      * @return true if the socket exists and is connected, false otherwise.
-    */
+     */
     function isSocketConnected(socket) {
-       return socket && (
-            (socket.socket && socket.socket.connected) || socket.connected
-        );
+      return (
+        socket &&
+        ((socket.socket && socket.socket.connected) || socket.connected)
+      );
     }
 
     /** @private */
@@ -364,22 +389,24 @@ var Easyrtc = function() {
     // This function is only used internally by easyrtc.js
     //
     var haveAudioVideo = {
-        audio: false,
-        video: false
+      audio: false,
+      video: false,
     };
 
     /**
      * @private
      * @param {String} key
      */
-    this.getConstantString = function(key) {
-        if (easyrtc_lang[key]) {
-            return easyrtc_lang[key];
-        }
-        else {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Could not find key='" + key + "' in easyrtc_lang");
-            return key;
-        }
+    this.getConstantString = function (key) {
+      if (easyrtc_lang[key]) {
+        return easyrtc_lang[key];
+      } else {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Could not find key='" + key + "' in easyrtc_lang"
+        );
+        return key;
+      }
     };
 
     /** @private */
@@ -387,8 +414,8 @@ var Easyrtc = function() {
     // this is a list of the events supported by the generalized event listener.
     //
     var allowedEvents = {
-        roomOccupant: true,  // this receives the list of everybody in any room you belong to
-        roomOccupants: true  // this receives a {roomName:..., occupants:...} value for a specific room
+      roomOccupant: true, // this receives the list of everybody in any room you belong to
+      roomOccupants: true, // this receives a {roomName:..., occupants:...} value for a specific room
     };
 
     /** @private */
@@ -405,14 +432,20 @@ var Easyrtc = function() {
      * @param {String} callingFunction the name of the calling function.
      */
     function event(eventName, callingFunction) {
-        if (typeof eventName !== 'string') {
-            self.showError(self.errCodes.DEVELOPER_ERR, callingFunction + " called without a string as the first argument");
-            throw "developer error";
-        }
-        if (!allowedEvents[eventName]) {
-            self.showError(self.errCodes.DEVELOPER_ERR, callingFunction + " called with a bad event name = " + eventName);
-            throw "developer error";
-        }
+      if (typeof eventName !== "string") {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          callingFunction + " called without a string as the first argument"
+        );
+        throw "developer error";
+      }
+      if (!allowedEvents[eventName]) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          callingFunction + " called with a bad event name = " + eventName
+        );
+        throw "developer error";
+      }
     }
 
     /**
@@ -424,20 +457,24 @@ var Easyrtc = function() {
      * data as it's second argument.
      * @returns {void}
      */
-    this.addEventListener = function(eventName, eventListener) {
-        event(eventName, "addEventListener");
-        if (typeof eventListener !== 'function') {
-            self.showError(self.errCodes.DEVELOPER_ERR, "addEventListener called with a non-function for second argument");
-            throw "developer error";
-        }
-        //
-        // remove the event listener if it's already present so we don't end up with two copies
-        //
-        self.removeEventListener(eventName, eventListener);
-        if (!eventListeners[eventName]) {
-            eventListeners[eventName] = [];
-        }
-        eventListeners[eventName][eventListeners[eventName].length] = eventListener;
+    this.addEventListener = function (eventName, eventListener) {
+      event(eventName, "addEventListener");
+      if (typeof eventListener !== "function") {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "addEventListener called with a non-function for second argument"
+        );
+        throw "developer error";
+      }
+      //
+      // remove the event listener if it's already present so we don't end up with two copies
+      //
+      self.removeEventListener(eventName, eventListener);
+      if (!eventListeners[eventName]) {
+        eventListeners[eventName] = [];
+      }
+      eventListeners[eventName][eventListeners[eventName].length] =
+        eventListener;
     };
 
     /**
@@ -445,20 +482,20 @@ var Easyrtc = function() {
      * @param {String} eventName
      * @param {Function} eventListener
      */
-    this.removeEventListener = function(eventName, eventListener) {
-        event(eventName, "removeEventListener");
-        var listeners = eventListeners[eventName];
-        var i = 0;
-        if (listeners) {
-            for (i = 0; i < listeners.length; i++) {
-                if (listeners[i] === eventListener) {
-                    if (i < listeners.length - 1) {
-                        listeners[i] = listeners[listeners.length - 1];
-                    }
-                    listeners.length = listeners.length - 1;
-                }
+    this.removeEventListener = function (eventName, eventListener) {
+      event(eventName, "removeEventListener");
+      var listeners = eventListeners[eventName];
+      var i = 0;
+      if (listeners) {
+        for (i = 0; i < listeners.length; i++) {
+          if (listeners[i] === eventListener) {
+            if (i < listeners.length - 1) {
+              listeners[i] = listeners[listeners.length - 1];
             }
+            listeners.length = listeners.length - 1;
+          }
         }
+      }
     };
 
     /**
@@ -467,15 +504,15 @@ var Easyrtc = function() {
      * @param {String} eventName
      * @param {Object} eventData
      */
-    this.emitEvent = function(eventName, eventData) {
-        event(eventName, "emitEvent");
-        var listeners = eventListeners[eventName];
-        var i = 0;
-        if (listeners) {
-            for (i = 0; i < listeners.length; i++) {
-                listeners[i](eventName, eventData);
-            }
+    this.emitEvent = function (eventName, eventData) {
+      event(eventName, "emitEvent");
+      var listeners = eventListeners[eventName];
+      var i = 0;
+      if (listeners) {
+        for (i = 0; i < listeners.length; i++) {
+          listeners[i](eventName, eventData);
         }
+      }
     };
 
     /**
@@ -484,26 +521,26 @@ var Easyrtc = function() {
      * @type Object
      */
     this.errCodes = {
-        BAD_NAME: "BAD_NAME", // a user name wasn't of the desired form
-        CALL_ERR: "CALL_ERR", // something went wrong creating the peer connection
-        DEVELOPER_ERR: "DEVELOPER_ERR", // the developer using the EasyRTC library made a mistake
-        SYSTEM_ERR: "SYSTEM_ERR", // probably an error related to the network
-        CONNECT_ERR: "CONNECT_ERR", // error occurred when trying to create a connection
-        MEDIA_ERR: "MEDIA_ERR", // unable to get the local media
-        MEDIA_WARNING: "MEDIA_WARNING", // didn't get the desired resolution
-        INTERNAL_ERR: "INTERNAL_ERR",
-        PEER_GONE: "PEER_GONE", // peer doesn't exist
-        ALREADY_CONNECTED: "ALREADY_CONNECTED",
-        BAD_CREDENTIAL: "BAD_CREDENTIAL",
-        ICECANDIDATE_ERR: "ICECANDIDATE_ERR",
-        NOVIABLEICE: "NOVIABLEICE",
-        SIGNAL_ERR: "SIGNAL_ERR"
+      BAD_NAME: "BAD_NAME", // a user name wasn't of the desired form
+      CALL_ERR: "CALL_ERR", // something went wrong creating the peer connection
+      DEVELOPER_ERR: "DEVELOPER_ERR", // the developer using the EasyRTC library made a mistake
+      SYSTEM_ERR: "SYSTEM_ERR", // probably an error related to the network
+      CONNECT_ERR: "CONNECT_ERR", // error occurred when trying to create a connection
+      MEDIA_ERR: "MEDIA_ERR", // unable to get the local media
+      MEDIA_WARNING: "MEDIA_WARNING", // didn't get the desired resolution
+      INTERNAL_ERR: "INTERNAL_ERR",
+      PEER_GONE: "PEER_GONE", // peer doesn't exist
+      ALREADY_CONNECTED: "ALREADY_CONNECTED",
+      BAD_CREDENTIAL: "BAD_CREDENTIAL",
+      ICECANDIDATE_ERR: "ICECANDIDATE_ERR",
+      NOVIABLEICE: "NOVIABLEICE",
+      SIGNAL_ERR: "SIGNAL_ERR",
     };
 
     this.apiVersion = "1.1.1-beta";
 
     /** Most basic message acknowledgment object */
-    this.ackMessage = {msgType: "ack"};
+    this.ackMessage = { msgType: "ack" };
 
     /** Regular expression pattern for user ids. This will need modification to support non US character sets */
     this.usernameRegExp = /^(.){1,64}$/;
@@ -537,16 +574,19 @@ var Easyrtc = function() {
      * Must be called before the call to have an effect.
      * @param value - true to receive audio, false otherwise. The default is true.
      */
-    this.enableAudioReceive = function(value) {
-        if (
-             adapter && adapter.browserDetails &&
-                 (adapter.browserDetails.browser === "chrome" && adapter.browserDetails.version < 65)
-         ) {
-            receivedMediaConstraints.mandatory = receivedMediaConstraints.mandatory || {};
-            receivedMediaConstraints.mandatory.OfferToReceiveAudio = value;
-        } else {
-            receivedMediaConstraints.offerToReceiveAudio = value;
-        }
+    this.enableAudioReceive = function (value) {
+      if (
+        adapter &&
+        adapter.browserDetails &&
+        adapter.browserDetails.browser === "chrome" &&
+        adapter.browserDetails.version < 65
+      ) {
+        receivedMediaConstraints.mandatory =
+          receivedMediaConstraints.mandatory || {};
+        receivedMediaConstraints.mandatory.OfferToReceiveAudio = value;
+      } else {
+        receivedMediaConstraints.offerToReceiveAudio = value;
+      }
     };
 
     /**
@@ -554,16 +594,19 @@ var Easyrtc = function() {
      * Must be called before the call to have an effect.
      * @param value - true to receive video, false otherwise. The default is true.
      */
-    this.enableVideoReceive = function(value) {
-        if (
-             adapter && adapter.browserDetails &&
-                 (adapter.browserDetails.browser === "chrome" && adapter.browserDetails.version < 65)
-         ) {
-            receivedMediaConstraints.mandatory = receivedMediaConstraints.mandatory || {};
-            receivedMediaConstraints.mandatory.OfferToReceiveVideo = value;
-        } else {
-           receivedMediaConstraints.offerToReceiveVideo = value;
-        }
+    this.enableVideoReceive = function (value) {
+      if (
+        adapter &&
+        adapter.browserDetails &&
+        adapter.browserDetails.browser === "chrome" &&
+        adapter.browserDetails.version < 65
+      ) {
+        receivedMediaConstraints.mandatory =
+          receivedMediaConstraints.mandatory || {};
+        receivedMediaConstraints.mandatory.OfferToReceiveVideo = value;
+      } else {
+        receivedMediaConstraints.offerToReceiveVideo = value;
+      }
     };
 
     // True by default
@@ -572,28 +615,26 @@ var Easyrtc = function() {
     this.enableVideoReceive(true);
 
     function getSourceList(callback, sourceType) {
-        navigator.mediaDevices.enumerateDevices().then(
-             function(values) {
-                var results = [];
-                for (var i = 0; i < values.length; i++) {
-                    var source = values[i];
-                    if (source.kind === sourceType) {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then(function (values) {
+          var results = [];
+          for (var i = 0; i < values.length; i++) {
+            var source = values[i];
+            if (source.kind === sourceType) {
+              //backwards compatibility
+              if (!source.id) {
+                source.id = source.deviceId;
+              }
 
-                        //backwards compatibility
-                        if (!source.id) {
-                            source.id = source.deviceId;
-                        }
-
-                        results.push(source);
-                    }
-                }
-                callback(results);
-             }
-          ).catch(
-            function(reason) {
-               logDebug("Unable to enumerate devices (" + reason + ")");
+              results.push(source);
             }
-        );
+          }
+          callback(results);
+        })
+        .catch(function (reason) {
+          logDebug("Unable to enumerate devices (" + reason + ")");
+        });
     }
 
     /**
@@ -604,24 +645,33 @@ var Easyrtc = function() {
      *  @param {Object} element an HTML5 video element
      *  @param {String} sinkId a deviceid from getAudioSinkList
      */
-    this.setAudioOutput = function(element, sinkId) {
-       if (typeof element.sinkId !== 'undefined') {
-          element.setSinkId(sinkId)
-          .then(function() {
-            logDebug('Success, audio output device attached: ' + sinkId + ' to ' +
-                'element with ' + element.title + ' as source.');
+    this.setAudioOutput = function (element, sinkId) {
+      if (typeof element.sinkId !== "undefined") {
+        element
+          .setSinkId(sinkId)
+          .then(function () {
+            logDebug(
+              "Success, audio output device attached: " +
+                sinkId +
+                " to " +
+                "element with " +
+                element.title +
+                " as source."
+            );
           })
-          .catch(function(error) {
+          .catch(function (error) {
             var errorMessage = error;
-            if (error.name === 'SecurityError') {
-              errorMessage = 'You need to use HTTPS for selecting audio output ' +
-                  'device: ' + error;
+            if (error.name === "SecurityError") {
+              errorMessage =
+                "You need to use HTTPS for selecting audio output " +
+                "device: " +
+                error;
             }
             logDebug(errorMessage);
           });
-       } else {
-          logDebug('Browser does not support output device selection.');
-       }
+      } else {
+        logDebug("Browser does not support output device selection.");
+      }
     };
 
     /**
@@ -634,8 +684,8 @@ var Easyrtc = function() {
      *               }
      *          });
      */
-    this.getAudioSinkList = function(callback){
-       getSourceList(callback, "audiooutput");
+    this.getAudioSinkList = function (callback) {
+      getSourceList(callback, "audiooutput");
     };
     /**
      * Gets a list of the available audio sources (ie, microphones)
@@ -647,8 +697,8 @@ var Easyrtc = function() {
      *               }
      *          });
      */
-    this.getAudioSourceList = function(callback){
-       getSourceList(callback, "audioinput");
+    this.getAudioSourceList = function (callback) {
+      getSourceList(callback, "audioinput");
     };
 
     /**
@@ -661,10 +711,9 @@ var Easyrtc = function() {
      *               }
      *          });
      */
-    this.getVideoSourceList = function(callback) {
-       getSourceList(callback, "videoinput");
+    this.getVideoSourceList = function (callback) {
+      getSourceList(callback, "videoinput");
     };
-
 
     /** @private */
     var dataChannelName = "dc";
@@ -692,9 +741,9 @@ var Easyrtc = function() {
     this.nativeVideoHeight = 0;
 
     /** This constant determines how long (in bytes) a message can be before being split in chunks of that size.
-    * This is because there is a limitation of the length of the message you can send on the
-    * data channel between browsers.
-    */
+     * This is because there is a limitation of the length of the message you can send on the
+     * data channel between browsers.
+     */
     this.maxP2PMessageLength = 1000;
 
     /** The width of the local media stream video in pixels. This field is set an indeterminate period
@@ -718,8 +767,8 @@ var Easyrtc = function() {
      *        console.error("Bad user name");
      *    }
      */
-    this.isNameValid = function(name) {
-        return self.usernameRegExp.test(name);
+    this.isNameValid = function (name) {
+      return self.usernameRegExp.test(name);
     };
 
     /**
@@ -727,8 +776,8 @@ var Easyrtc = function() {
      * and transmit back to the server as it's easyrtcsid in the first message.
      * @param {String} cookieId
      */
-    this.setCookieId = function(cookieId) {
-        self.cookieId = cookieId;
+    this.setCookieId = function (cookieId) {
+      self.cookieId = cookieId;
     };
 
     /** @private */
@@ -739,8 +788,8 @@ var Easyrtc = function() {
      * @param {String} videoSrcId is a id value from one of the entries fetched by getVideoSourceList. null for default.
      * @example easyrtc.setVideoSource( videoSrcId);
      */
-    this.setVideoSource = function(videoSrcId) {
-        self._desiredVideoProperties.videoSrcId = videoSrcId;
+    this.setVideoSource = function (videoSrcId) {
+      self._desiredVideoProperties.videoSrcId = videoSrcId;
     };
 
     /** This function requests that screen capturing be used to provide the local media source
@@ -754,29 +803,27 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.setScreenCapture(true);
      */
-    this.setScreenCapture = function(enableScreenCapture, mediaSourceId) {
-
-        if (enableScreenCapture) {
-
-            // Set video
-            self._presetMediaConstraints = {
-                    video:{
-                        mozMediaSource: "screen",
-                        chromeMediaSource: 'screen',
-                        mediaSource: "screen",
-                        mediaSourceId: 'screen:0',
-                        maxWidth: screen.width,
-                        maxHeight: screen.height,
-                        minWidth: screen.width,
-                        minHeight: screen.height,
-                        minFrameRate: 1,
-                        maxFrameRate: 15
-                    },
-                    // In Chrome, the chrome.desktopCapture extension API can be used to capture the screen,
-                    // which includes system audio (but only on Windows and Chrome OS and without plans for OS X or Linux).
-                    // - http://stackoverflow.com/questions/34235077/capture-system-sound-from-browser?answertab=votes#tab-top
-                    audio: false
-                    /*
+    this.setScreenCapture = function (enableScreenCapture, mediaSourceId) {
+      if (enableScreenCapture) {
+        // Set video
+        self._presetMediaConstraints = {
+          video: {
+            mozMediaSource: "screen",
+            chromeMediaSource: "screen",
+            mediaSource: "screen",
+            mediaSourceId: "screen:0",
+            maxWidth: screen.width,
+            maxHeight: screen.height,
+            minWidth: screen.width,
+            minHeight: screen.height,
+            minFrameRate: 1,
+            maxFrameRate: 15,
+          },
+          // In Chrome, the chrome.desktopCapture extension API can be used to capture the screen,
+          // which includes system audio (but only on Windows and Chrome OS and without plans for OS X or Linux).
+          // - http://stackoverflow.com/questions/34235077/capture-system-sound-from-browser?answertab=votes#tab-top
+          audio: false,
+          /*
                     {
                         optional: {
                             chromeMediaSource: 'system',
@@ -784,33 +831,35 @@ var Easyrtc = function() {
                         }
                     }
                     */
-                };
+        };
 
-            if (mediaSourceId) {
-                if (
-                    adapter && adapter.browserDetails &&
-                        (adapter.browserDetails.browser === "chrome")
-                ) {
-
-                    var mandatory = self._presetMediaConstraints.video;
-                    mandatory.chromeMediaSource = 'desktop';
-                    mandatory.chromeMediaSourceId = mediaSourceId;
-                    self._presetMediaConstraints.video = {
-                        mandatory: mandatory,
-                        // http://www.acis.ufl.edu/~ptony82/jingle-html/classwebrtc_1_1MediaConstraintsInterface.html
-                        optional: [{
-                            googTemporalLayeredScreencast: true
-                        }]
-                    };
-                } else {
-                    self._presetMediaConstraints.video.mediaSourceId = mediaSourceId;
-                }
-            }
+        if (mediaSourceId) {
+          if (
+            adapter &&
+            adapter.browserDetails &&
+            adapter.browserDetails.browser === "chrome"
+          ) {
+            var mandatory = self._presetMediaConstraints.video;
+            mandatory.chromeMediaSource = "desktop";
+            mandatory.chromeMediaSourceId = mediaSourceId;
+            self._presetMediaConstraints.video = {
+              mandatory: mandatory,
+              // http://www.acis.ufl.edu/~ptony82/jingle-html/classwebrtc_1_1MediaConstraintsInterface.html
+              optional: [
+                {
+                  googTemporalLayeredScreencast: true,
+                },
+              ],
+            };
+          } else {
+            self._presetMediaConstraints.video.mediaSourceId = mediaSourceId;
+          }
+        }
 
         // Clear
-        } else {
-            delete self._presetMediaConstraints;
-        }
+      } else {
+        delete self._presetMediaConstraints;
+      }
     };
 
     /** @private */
@@ -821,8 +870,8 @@ var Easyrtc = function() {
      * @param {String} audioSrcId is a id value from one of the entries fetched by getAudioSourceList. null for default.
      * @example easyrtc.setAudioSource( audioSrcId);
      */
-    this.setAudioSource = function(audioSrcId) {
-        self._desiredAudioProperties.audioSrcId = audioSrcId;
+    this.setAudioSource = function (audioSrcId) {
+      self._desiredAudioProperties.audioSrcId = audioSrcId;
     };
 
     /** This function is used to set the dimensions of the local camera, usually to get HD.
@@ -836,100 +885,102 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.setVideoDims();
      */
-    this.setVideoDims = function(width, height, frameRate) {
-        self._desiredVideoProperties.width = width;
-        self._desiredVideoProperties.height = height;
-        if (frameRate !== undefined) {
-            self._desiredVideoProperties.frameRate = frameRate;
-        }
+    this.setVideoDims = function (width, height, frameRate) {
+      self._desiredVideoProperties.width = width;
+      self._desiredVideoProperties.height = height;
+      if (frameRate !== undefined) {
+        self._desiredVideoProperties.frameRate = frameRate;
+      }
     };
 
     /**
      * Builds the constraint object passed to getUserMedia.
      * @returns {Object} mediaConstraints
      */
-    self.getUserMediaConstraints = function() {
-        var constraints = {};
-        //
-        // _presetMediaConstraints allow you to provide your own constraints to be used
-        // with initMediaSource.
-        //
-        if (self._presetMediaConstraints) {
-            constraints = self._presetMediaConstraints;
-            delete self._presetMediaConstraints;
-            return constraints;
-        }  else if (!self.videoEnabled) {
-            constraints.video = false;
-        }
-        else {
-
-            // Tested Firefox 49 and MS Edge require minFrameRate and maxFrameRate
-            // instead max,min,ideal that cause GetUserMedia failure.
-            // Until confirmed both browser support idea,max and min we need this.
-            if (
-                adapter && adapter.browserDetails &&
-                    (adapter.browserDetails.browser === "firefox" || adapter.browserDetails.browser === "edge")
-            ) {
-                constraints.video = {};
-                if (self._desiredVideoProperties.width) {
-                    constraints.video.width = self._desiredVideoProperties.width;
-                }
-                if (self._desiredVideoProperties.height) {
-                    constraints.video.height = self._desiredVideoProperties.height;
-                }
-                if (self._desiredVideoProperties.frameRate) {
-                    constraints.video.frameRate = {
-                        minFrameRate: self._desiredVideoProperties.frameRate,
-                        maxFrameRate: self._desiredVideoProperties.frameRate
-                    };
-                }
-                if (self._desiredVideoProperties.videoSrcId) {
-                    constraints.video.deviceId = self._desiredVideoProperties.videoSrcId;
-                }
-
-            // chrome and opera
-            } else {
-                constraints.video = {};
-                if (self._desiredVideoProperties.width) {
-                     constraints.video.width = {
-                        max: self._desiredVideoProperties.width,
-                        min : self._desiredVideoProperties.width,
-                        ideal : self._desiredVideoProperties.width
-                     };
-                }
-                if (self._desiredVideoProperties.height) {
-                    constraints.video.height = {
-                        max: self._desiredVideoProperties.height,
-                        min: self._desiredVideoProperties.height,
-                        ideal: self._desiredVideoProperties.height
-                    };
-                }
-                if (self._desiredVideoProperties.frameRate) {
-                    constraints.video.frameRate = {
-                        max: self._desiredVideoProperties.frameRate,
-                        ideal: self._desiredVideoProperties.frameRate
-                    };
-                }
-                if (self._desiredVideoProperties.videoSrcId) {
-                    constraints.video.deviceId = self._desiredVideoProperties.videoSrcId;
-                }
-                // hack for opera
-                if (Object.keys(constraints.video).length === 0 ) {
-                    constraints.video = true;
-                }
-            }
-        }
-
-        if (!self.audioEnabled) {
-            constraints.audio = false;
-        } else {
-            constraints.audio = {};
-            if (self._desiredAudioProperties.audioSrcId) {
-                constraints.audio.deviceId = self._desiredAudioProperties.audioSrcId;
-            }
-        }
-
+    self.getUserMediaConstraints = function () {
+      var constraints = {};
+      //
+      // _presetMediaConstraints allow you to provide your own constraints to be used
+      // with initMediaSource.
+      //
+      if (self._presetMediaConstraints) {
+        constraints = self._presetMediaConstraints;
+        delete self._presetMediaConstraints;
         return constraints;
+      } else if (!self.videoEnabled) {
+        constraints.video = false;
+      } else {
+        // Tested Firefox 49 and MS Edge require minFrameRate and maxFrameRate
+        // instead max,min,ideal that cause GetUserMedia failure.
+        // Until confirmed both browser support idea,max and min we need this.
+        if (
+          adapter &&
+          adapter.browserDetails &&
+          (adapter.browserDetails.browser === "firefox" ||
+            adapter.browserDetails.browser === "edge")
+        ) {
+          constraints.video = {};
+          if (self._desiredVideoProperties.width) {
+            constraints.video.width = self._desiredVideoProperties.width;
+          }
+          if (self._desiredVideoProperties.height) {
+            constraints.video.height = self._desiredVideoProperties.height;
+          }
+          if (self._desiredVideoProperties.frameRate) {
+            constraints.video.frameRate = {
+              minFrameRate: self._desiredVideoProperties.frameRate,
+              maxFrameRate: self._desiredVideoProperties.frameRate,
+            };
+          }
+          if (self._desiredVideoProperties.videoSrcId) {
+            constraints.video.deviceId =
+              self._desiredVideoProperties.videoSrcId;
+          }
+
+          // chrome and opera
+        } else {
+          constraints.video = {};
+          if (self._desiredVideoProperties.width) {
+            constraints.video.width = {
+              max: self._desiredVideoProperties.width,
+              min: self._desiredVideoProperties.width,
+              ideal: self._desiredVideoProperties.width,
+            };
+          }
+          if (self._desiredVideoProperties.height) {
+            constraints.video.height = {
+              max: self._desiredVideoProperties.height,
+              min: self._desiredVideoProperties.height,
+              ideal: self._desiredVideoProperties.height,
+            };
+          }
+          if (self._desiredVideoProperties.frameRate) {
+            constraints.video.frameRate = {
+              max: self._desiredVideoProperties.frameRate,
+              ideal: self._desiredVideoProperties.frameRate,
+            };
+          }
+          if (self._desiredVideoProperties.videoSrcId) {
+            constraints.video.deviceId =
+              self._desiredVideoProperties.videoSrcId;
+          }
+          // hack for opera
+          if (Object.keys(constraints.video).length === 0) {
+            constraints.video = true;
+          }
+        }
+      }
+
+      if (!self.audioEnabled) {
+        constraints.audio = false;
+      } else {
+        constraints.audio = {};
+        if (self._desiredAudioProperties.audioSrcId) {
+          constraints.audio.deviceId = self._desiredAudioProperties.audioSrcId;
+        }
+      }
+
+      return constraints;
     };
 
     /** Set the application name. Applications can only communicate with other applications
@@ -939,8 +990,8 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.setApplicationName('simpleAudioVideo');
      */
-    this.setApplicationName = function(name) {
-        self.applicationName = name;
+    this.setApplicationName = function (name) {
+      self.applicationName = name;
     };
 
     /** Enable or disable logging to the console.
@@ -951,105 +1002,102 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.enableDebug(true);
      */
-    this.enableDebug = function(enable) {
-        if (enable) {
-            self.debugPrinter = function(message, obj) {
-                var now = new Date().toISOString();
-                var stackString = new Error().stack;
-                var srcLine = "location unknown";
-                if (stackString) {
-                    var stackFrameStrings = stackString.split('\n');
-                    srcLine = "";
-                    if (stackFrameStrings.length >= 5) {
-                        srcLine = stackFrameStrings[4];
-                    }
-                }
+    this.enableDebug = function (enable) {
+      if (enable) {
+        self.debugPrinter = function (message, obj) {
+          var now = new Date().toISOString();
+          var stackString = new Error().stack;
+          var srcLine = "location unknown";
+          if (stackString) {
+            var stackFrameStrings = stackString.split("\n");
+            srcLine = "";
+            if (stackFrameStrings.length >= 5) {
+              srcLine = stackFrameStrings[4];
+            }
+          }
 
-                console.log("debug " + now + " : " + message + " [" + srcLine + "]");
+          console.log("debug " + now + " : " + message + " [" + srcLine + "]");
 
-                if (typeof obj !== 'undefined') {
-                    console.log("debug " + now + " : ", obj);
-                }
-            };
-        }
-        else {
-            self.debugPrinter = null;
-        }
+          if (typeof obj !== "undefined") {
+            console.log("debug " + now + " : ", obj);
+          }
+        };
+      } else {
+        self.debugPrinter = null;
+      }
     };
 
     /**
      * Determines if the local browser supports WebRTC GetUserMedia (access to camera and microphone).
      * @returns {Boolean} True getUserMedia is supported.
      */
-    this.supportsGetUserMedia = function() {
-        return navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia !== 'undefined';
+    this.supportsGetUserMedia = function () {
+      return (
+        navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia !== "undefined"
+      );
     };
 
     /**
      * Determines if the local browser supports WebRTC Peer connections to the extent of being able to do video chats.
      * @returns {Boolean} True if Peer connections are supported.
      */
-    this.supportsPeerConnections = function() {
-        return typeof RTCPeerConnection !== 'undefined';
+    this.supportsPeerConnections = function () {
+      return typeof RTCPeerConnection !== "undefined";
     };
 
     /** Determines whether the current browser supports the new data channels.
      * EasyRTC will not open up connections with the old data channels.
      * @returns {Boolean}
      */
-    this.supportsDataChannels = function() {
+    this.supportsDataChannels = function () {
+      var hasCreateDataChannel = false;
 
-        var hasCreateDataChannel = false;
-
-        if (self.supportsPeerConnections()) {
-            try {
-                var peer = new RTCPeerConnection({iceServers: []}, {});
-                hasCreateDataChannel = typeof peer.createDataChannel !== 'undefined';
-                peer.close();
-            }
-            catch (err) {
-                // Ignore possible RTCPeerConnection.close error
-                // hasCreateDataChannel should reflect the feature state still.
-            }
+      if (self.supportsPeerConnections()) {
+        try {
+          var peer = new RTCPeerConnection({ iceServers: [] }, {});
+          hasCreateDataChannel = typeof peer.createDataChannel !== "undefined";
+          peer.close();
+        } catch (err) {
+          // Ignore possible RTCPeerConnection.close error
+          // hasCreateDataChannel should reflect the feature state still.
         }
+      }
 
-        return hasCreateDataChannel;
+      return hasCreateDataChannel;
     };
 
     /** @private */
     //
     // Experimental function to determine if statistics gathering is supported.
     //
-    this.supportsStatistics = function() {
+    this.supportsStatistics = function () {
+      var hasGetStats = false;
 
-        var hasGetStats = false;
-
-        if (self.supportsPeerConnections()) {
-            try {
-                var peer = new RTCPeerConnection({iceServers: []}, {});
-                hasGetStats = typeof peer.getStats !== 'undefined';
-                peer.close();
-            }
-            catch (err) {
-                // Ingore possible RTCPeerConnection.close error
-                // hasCreateDataChannel should reflect the feature state still.
-            }
+      if (self.supportsPeerConnections()) {
+        try {
+          var peer = new RTCPeerConnection({ iceServers: [] }, {});
+          hasGetStats = typeof peer.getStats !== "undefined";
+          peer.close();
+        } catch (err) {
+          // Ingore possible RTCPeerConnection.close error
+          // hasCreateDataChannel should reflect the feature state still.
         }
+      }
 
-        return hasGetStats;
+      return hasGetStats;
     };
 
     /** @private
      * @param {Array} pc_ice_config ice configuration array
      * @param {Object} optionalStuff peer constraints.
      */
-    this.createRTCPeerConnection = function(pc_config, optionalStuff) {
-        if (self.supportsPeerConnections()) {
-            return new RTCPeerConnection(pc_config, optionalStuff);
-        }
-        else {
-            throw "Your browser doesn't support webRTC (RTCPeerConnection)";
-        }
+    this.createRTCPeerConnection = function (pc_config, optionalStuff) {
+      if (self.supportsPeerConnections()) {
+        return new RTCPeerConnection(pc_config, optionalStuff);
+      } else {
+        throw "Your browser doesn't support webRTC (RTCPeerConnection)";
+      }
     };
 
     //
@@ -1057,18 +1105,20 @@ var Easyrtc = function() {
     // Versions of chrome < 31 don't support reliable data channels transport.
     // Firefox does.
     //
-    this.getDatachannelConstraints = function() {
-        return {
-            reliable: adapter && adapter.browserDetails &&
-                adapter.browserDetails.browser !== "chrome" &&
-                    adapter.browserDetails.version < 31
-        };
+    this.getDatachannelConstraints = function () {
+      return {
+        reliable:
+          adapter &&
+          adapter.browserDetails &&
+          adapter.browserDetails.browser !== "chrome" &&
+          adapter.browserDetails.version < 31,
+      };
     };
 
     /** @private */
     haveAudioVideo = {
-        audio: false,
-        video: false
+      audio: false,
+      video: false,
     };
     /** @private */
     var dataEnabled = false;
@@ -1083,12 +1133,12 @@ var Easyrtc = function() {
     /** @private */
     var lastLoggedInList = {};
     /** @private */
-    var receivePeer = {msgTypes: {}};
+    var receivePeer = { msgTypes: {} };
     /** @private */
     var receiveServerCB = null;
     /** @private */
     // dummy placeholder for when we aren't connected
-    var updateConfigurationInfo = function() { };
+    var updateConfigurationInfo = function () {};
     /** @private */
     //
     //
@@ -1111,8 +1161,8 @@ var Easyrtc = function() {
     //     }
     //
 
-    this.printpeerconns = function() {
-        console.log("peerconns = ", peerConns);
+    this.printpeerconns = function () {
+      console.log("peerconns = ", peerConns);
     };
 
     /** @private */
@@ -1126,28 +1176,25 @@ var Easyrtc = function() {
      * @param {string} caller
      * @param {Function} helper
      */
-    this.acceptCheck = function(caller, helper) {
-        helper(true);
+    this.acceptCheck = function (caller, helper) {
+      helper(true);
     };
 
     /** @private
      * @param {string} easyrtcid
      * @param {HTMLMediaStream} stream
      */
-    this.streamAcceptor = function(easyrtcid, stream) {
-    };
+    this.streamAcceptor = function (easyrtcid, stream) {};
 
     /** @private
      * @param {string} easyrtcid
      */
-    this.onStreamClosed = function(easyrtcid) {
-    };
+    this.onStreamClosed = function (easyrtcid) {};
 
     /** @private
      * @param {string} easyrtcid
      */
-    this.callCancelled = function(easyrtcid) {
-    };
+    this.callCancelled = function (easyrtcid) {};
 
     /**
      * This function gets the raw RTCPeerConnection for a given easyrtcid
@@ -1155,289 +1202,298 @@ var Easyrtc = function() {
      * @param {RTCPeerConnection} for that easyrtcid, or null if no connection exists
      * Submitted by Fabian Bernhard.
      */
-    this.getPeerConnectionByUserId = function(userId) {
-        if (peerConns && peerConns[userId]) {
-            return peerConns[userId].pc;
-        }
-        return null;
+    this.getPeerConnectionByUserId = function (userId) {
+      if (peerConns && peerConns[userId]) {
+        return peerConns[userId].pc;
+      }
+      return null;
     };
 
-
     var chromeStatsFilter = [
-        {
-            "googTransmitBitrate": "transmitBitRate",
-            "googActualEncBitrate": "encodeRate",
-            "googAvailableSendBandwidth": "availableSendRate"
-        },
-        {
-            "googCodecName": "audioCodec",
-            "googTypingNoiseState": "typingNoise",
-            "packetsSent": "audioPacketsSent",
-            "bytesSent": "audioBytesSent"
-        },
-        {
-            "googCodecName": "videoCodec",
-            "googFrameRateSent": "outFrameRate",
-            "packetsSent": "videoPacketsSent",
-            "bytesSent": "videoBytesSent"
-        },
-        {
-            "packetsLost": "videoPacketsLost",
-            "packetsReceived": "videoPacketsReceived",
-            "bytesReceived": "videoBytesReceived",
-            "googFrameRateOutput": "frameRateOut"
-        },
-        {
-            "packetsLost": "audioPacketsLost",
-            "packetsReceived": "audioPacketsReceived",
-            "bytesReceived": "audioBytesReceived",
-            "audioOutputLevel": "audioOutputLevel"
-        },
-        {
-            "googRemoteAddress": "remoteAddress",
-            "googActiveConnection": "activeConnection"
-        },
-        {
-            "audioInputLevel": "audioInputLevel"
-        }
+      {
+        googTransmitBitrate: "transmitBitRate",
+        googActualEncBitrate: "encodeRate",
+        googAvailableSendBandwidth: "availableSendRate",
+      },
+      {
+        googCodecName: "audioCodec",
+        googTypingNoiseState: "typingNoise",
+        packetsSent: "audioPacketsSent",
+        bytesSent: "audioBytesSent",
+      },
+      {
+        googCodecName: "videoCodec",
+        googFrameRateSent: "outFrameRate",
+        packetsSent: "videoPacketsSent",
+        bytesSent: "videoBytesSent",
+      },
+      {
+        packetsLost: "videoPacketsLost",
+        packetsReceived: "videoPacketsReceived",
+        bytesReceived: "videoBytesReceived",
+        googFrameRateOutput: "frameRateOut",
+      },
+      {
+        packetsLost: "audioPacketsLost",
+        packetsReceived: "audioPacketsReceived",
+        bytesReceived: "audioBytesReceived",
+        audioOutputLevel: "audioOutputLevel",
+      },
+      {
+        googRemoteAddress: "remoteAddress",
+        googActiveConnection: "activeConnection",
+      },
+      {
+        audioInputLevel: "audioInputLevel",
+      },
     ];
 
     var firefoxStatsFilter = {
-        "outboundrtp_audio.bytesSent": "audioBytesSent",
-        "outboundrtp_video.bytesSent": "videoBytesSent",
-        "inboundrtp_video.bytesReceived": "videoBytesReceived",
-        "inboundrtp_audio.bytesReceived": "audioBytesReceived",
-        "outboundrtp_audio.packetsSent": "audioPacketsSent",
-        "outboundrtp_video.packetsSent": "videoPacketsSent",
-        "inboundrtp_video.packetsReceived": "videoPacketsReceived",
-        "inboundrtp_audio.packetsReceived": "audioPacketsReceived",
-        "inboundrtp_video.packetsLost": "videoPacketsLost",
-        "inboundrtp_audio.packetsLost": "audioPacketsLost",
-        "firefoxRemoteAddress": "remoteAddress"
+      "outboundrtp_audio.bytesSent": "audioBytesSent",
+      "outboundrtp_video.bytesSent": "videoBytesSent",
+      "inboundrtp_video.bytesReceived": "videoBytesReceived",
+      "inboundrtp_audio.bytesReceived": "audioBytesReceived",
+      "outboundrtp_audio.packetsSent": "audioPacketsSent",
+      "outboundrtp_video.packetsSent": "videoPacketsSent",
+      "inboundrtp_video.packetsReceived": "videoPacketsReceived",
+      "inboundrtp_audio.packetsReceived": "audioPacketsReceived",
+      "inboundrtp_video.packetsLost": "videoPacketsLost",
+      "inboundrtp_audio.packetsLost": "audioPacketsLost",
+      firefoxRemoteAddress: "remoteAddress",
     };
 
     /**
-      * This is a basic statistics filter that keesp just the generally
-      * useful information.
-      */
-    this.standardStatsFilter = adapter && adapter.browserDetails &&
-                adapter.browserDetails.browser === "firefox" ? firefoxStatsFilter : chromeStatsFilter;
+     * This is a basic statistics filter that keesp just the generally
+     * useful information.
+     */
+    this.standardStatsFilter =
+      adapter &&
+      adapter.browserDetails &&
+      adapter.browserDetails.browser === "firefox"
+        ? firefoxStatsFilter
+        : chromeStatsFilter;
 
     function getFirefoxPeerStatistics(peerId, callback, filter) {
-
-
-        if (!peerConns[peerId]) {
-            callback(peerId, {"connected": false});
-        }
-        else if (peerConns[peerId].pc.getStats) {
-            // TODO Safari
-            // [Error] Unhandled Promise Rejection: TypeError: Argument 1 ('selector') to RTCPeerConnection.getStats must be an instance of MediaStreamTrack
-            peerConns[peerId].pc.getStats(null).then(function(stats) {
-                var items = {};
-                var candidates = {};
-                var activeId = null;
-                var srcKey;
-                //
-                // the stats objects has a group of entries. Each entry is either an rtcp, rtp entry
-                // or a candidate entry.
-                //
-                if (stats) {
-                    stats.forEach(function(entry) {
-                        var majorKey;
-                        var subKey;
-                        if (entry.type.match(/boundrtp/)) {
-                            if (entry.id.match(/audio/)) {
-                                majorKey = entry.type + "_audio";
-                            }
-                            else if (entry.id.match(/video/)) {
-                                majorKey = entry.type + "_video";
-                            }
-                            else {
-                                return;
-                            }
-                            for (subKey in entry) {
-                                if (entry.hasOwnProperty(subKey)) {
-                                    items[majorKey + "." + subKey] = entry[subKey];
-                                }
-                            }
-                        }
-                        else {
-                            if( entry.hasOwnProperty("ipAddress") && entry.id) {
-                                candidates[entry.id] = entry.ipAddress + ":" +
-                                      entry.portNumber;
-                            }
-                            else if( entry.hasOwnProperty("selected") &&
-                                     entry.hasOwnProperty("remoteCandidateId") &&
-                                     entry.selected ) {
-                                activeId =  entry.remoteCandidateId;
-                            }
-                        }
-                    });
-                }
-
-                if (activeId) {
-                    items.firefoxRemoteAddress = candidates[activeId];
-                }
-                if (!filter) {
-                    callback(peerId, items);
-                }
-                else {
-                    var filteredItems = {};
-                    for (srcKey in filter) {
-                        if (filter.hasOwnProperty(srcKey) && items.hasOwnProperty(srcKey)) {
-                            filteredItems[ filter[srcKey]] = items[srcKey];
-                        }
+      if (!peerConns[peerId]) {
+        callback(peerId, { connected: false });
+      } else if (peerConns[peerId].pc.getStats) {
+        // TODO Safari
+        // [Error] Unhandled Promise Rejection: TypeError: Argument 1 ('selector') to RTCPeerConnection.getStats must be an instance of MediaStreamTrack
+        peerConns[peerId].pc.getStats(null).then(
+          function (stats) {
+            var items = {};
+            var candidates = {};
+            var activeId = null;
+            var srcKey;
+            //
+            // the stats objects has a group of entries. Each entry is either an rtcp, rtp entry
+            // or a candidate entry.
+            //
+            if (stats) {
+              stats.forEach(function (entry) {
+                var majorKey;
+                var subKey;
+                if (entry.type.match(/boundrtp/)) {
+                  if (entry.id.match(/audio/)) {
+                    majorKey = entry.type + "_audio";
+                  } else if (entry.id.match(/video/)) {
+                    majorKey = entry.type + "_video";
+                  } else {
+                    return;
+                  }
+                  for (subKey in entry) {
+                    if (entry.hasOwnProperty(subKey)) {
+                      items[majorKey + "." + subKey] = entry[subKey];
                     }
-                    callback(peerId, filteredItems);
+                  }
+                } else {
+                  if (entry.hasOwnProperty("ipAddress") && entry.id) {
+                    candidates[entry.id] =
+                      entry.ipAddress + ":" + entry.portNumber;
+                  } else if (
+                    entry.hasOwnProperty("selected") &&
+                    entry.hasOwnProperty("remoteCandidateId") &&
+                    entry.selected
+                  ) {
+                    activeId = entry.remoteCandidateId;
+                  }
                 }
-            },
-                    function(error) {
-                        logDebug("unable to get statistics");
-                    });
-        }
-        else {
-            callback(peerId, {"statistics": self.getConstantString("statsNotSupported")});
-        }
+              });
+            }
+
+            if (activeId) {
+              items.firefoxRemoteAddress = candidates[activeId];
+            }
+            if (!filter) {
+              callback(peerId, items);
+            } else {
+              var filteredItems = {};
+              for (srcKey in filter) {
+                if (
+                  filter.hasOwnProperty(srcKey) &&
+                  items.hasOwnProperty(srcKey)
+                ) {
+                  filteredItems[filter[srcKey]] = items[srcKey];
+                }
+              }
+              callback(peerId, filteredItems);
+            }
+          },
+          function (error) {
+            logDebug("unable to get statistics");
+          }
+        );
+      } else {
+        callback(peerId, {
+          statistics: self.getConstantString("statsNotSupported"),
+        });
+      }
     }
 
     function getChromePeerStatistics(peerId, callback, filter) {
+      if (!peerConns[peerId]) {
+        callback(peerId, { connected: false });
+      } else if (peerConns[peerId].pc.getStats) {
+        peerConns[peerId].pc.getStats().then(function (stats) {
+          var localStats = {};
+          var part,
+            parts = stats.result();
+          var i, j;
+          var itemKeys;
+          var itemKey;
+          var names;
+          var userKey;
+          var partNames = [];
+          var partList;
+          var bestBytes = 0;
+          var bestI;
+          var turnAddress = null;
+          var hasActive, curReceived;
+          var localAddress, remoteAddress;
+          if (!filter) {
+            for (i = 0; i < parts.length; i++) {
+              names = parts[i].names();
+              for (j = 0; j < names.length; j++) {
+                itemKey = names[j];
+                localStats[parts[i].id + "." + itemKey] =
+                  parts[i].stat(itemKey);
+              }
+            }
+          } else {
+            for (i = 0; i < parts.length; i++) {
+              partNames[i] = {};
+              //
+              // convert the names into a dictionary
+              //
+              names = parts[i].names();
+              for (j = 0; j < names.length; j++) {
+                partNames[i][names[j]] = true;
+              }
 
-        if (!peerConns[peerId]) {
-            callback(peerId, {"connected": false});
-        }
-        else if (peerConns[peerId].pc.getStats) {
-
-            peerConns[peerId].pc.getStats().then(function(stats) {
-
-                var localStats = {};
-                var part, parts = stats.result();
-                var i, j;
-                var itemKeys;
-                var itemKey;
-                var names;
-                var userKey;
-                var partNames = [];
-                var partList;
-                var bestBytes = 0;
-                var bestI;
-                var turnAddress = null;
-                var hasActive, curReceived;
-                var localAddress, remoteAddress;
-                if (!filter) {
-                    for (i = 0; i < parts.length; i++) {
-                        names = parts[i].names();
-                        for (j = 0; j < names.length; j++) {
-                            itemKey = names[j];
-                            localStats[parts[i].id + "." + itemKey] = parts[i].stat(itemKey);
-                        }
-                    }
+              //
+              // a chrome-firefox connection results in several activeConnections.
+              // we only want one, so we look for the one with the most data being received on it.
+              //
+              if (
+                partNames[i].googRemoteAddress &&
+                partNames[i].googActiveConnection
+              ) {
+                hasActive = parts[i].stat("googActiveConnection");
+                if (hasActive === true || hasActive === "true") {
+                  curReceived =
+                    parseInt(parts[i].stat("bytesReceived")) +
+                    parseInt(parts[i].stat("bytesSent"));
+                  if (curReceived > bestBytes) {
+                    bestI = i;
+                    bestBytes = curReceived;
+                  }
                 }
-                else {
-                    for (i = 0; i < parts.length; i++) {
-                        partNames[i] = {};
-                        //
-                        // convert the names into a dictionary
-                        //
-                        names = parts[i].names();
-                        for (j = 0; j < names.length; j++) {
-                            partNames[i][names[j]] = true;
-                        }
+              }
+            }
 
-                        //
-                        // a chrome-firefox connection results in several activeConnections.
-                        // we only want one, so we look for the one with the most data being received on it.
-                        //
-                        if (partNames[i].googRemoteAddress && partNames[i].googActiveConnection) {
-                            hasActive = parts[i].stat("googActiveConnection");
-                            if (hasActive === true || hasActive === "true") {
-                                curReceived = parseInt(parts[i].stat("bytesReceived")) +
-                                        parseInt(parts[i].stat("bytesSent"));
-                                if (curReceived > bestBytes) {
-                                    bestI = i;
-                                    bestBytes = curReceived;
-                                }
-                            }
-                        }
-                    }
-
-                    for (i = 0; i < parts.length; i++) {
-                        //
-                        // discard info from any inactive connection.
-                        //
-                        if (partNames[i].googActiveConnection) {
-                            if (i !== bestI) {
-                                partNames[i] = {};
-                            }
-                            else {
-                                localAddress = parts[i].stat("googLocalAddress").split(":")[0];
-                                remoteAddress = parts[i].stat("googRemoteAddress").split(":")[0];
-                                if (self.isTurnServer(localAddress)) {
-                                    turnAddress = localAddress;
-                                }
-                                else if (self.isTurnServer(remoteAddress)) {
-                                    turnAddress = remoteAddress;
-                                }
-                            }
-                        }
-                    }
-
-                    for (i = 0; i < filter.length; i++) {
-                        itemKeys = filter[i];
-                        partList = [];
-                        part = null;
-                        for (j = 0; j < parts.length; j++) {
-                            var fullMatch = true;
-                            for (itemKey in itemKeys) {
-                                if (itemKeys.hasOwnProperty(itemKey) && !partNames[j][itemKey]) {
-                                    fullMatch = false;
-                                    break;
-                                }
-                            }
-                            if (fullMatch && parts[j]) {
-                                partList.push(parts[j]);
-                            }
-                        }
-                        if (partList.length === 1) {
-                            for (j = 0; j < partList.length; j++) {
-                                part = partList[j];
-                                if (part) {
-                                    for (itemKey in itemKeys) {
-                                        if (itemKeys.hasOwnProperty(itemKey)) {
-                                            userKey = itemKeys[itemKey];
-                                            localStats[userKey] = part.stat(itemKey);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else if (partList.length > 1) {
-                            for (itemKey in itemKeys) {
-                                if (itemKeys.hasOwnProperty(itemKey)) {
-                                    localStats[itemKeys[itemKey]] = [];
-                                }
-                            }
-                            for (j = 0; j < partList.length; j++) {
-                                part = partList[j];
-                                    for (itemKey in itemKeys) {
-                                        if (itemKeys.hasOwnProperty(itemKey)) {
-                                            userKey = itemKeys[itemKey];
-                                            localStats[userKey].push(part.stat(itemKey));
-                                        }
-                                    }
-                            }
-                        }
-                    }
+            for (i = 0; i < parts.length; i++) {
+              //
+              // discard info from any inactive connection.
+              //
+              if (partNames[i].googActiveConnection) {
+                if (i !== bestI) {
+                  partNames[i] = {};
+                } else {
+                  localAddress = parts[i]
+                    .stat("googLocalAddress")
+                    .split(":")[0];
+                  remoteAddress = parts[i]
+                    .stat("googRemoteAddress")
+                    .split(":")[0];
+                  if (self.isTurnServer(localAddress)) {
+                    turnAddress = localAddress;
+                  } else if (self.isTurnServer(remoteAddress)) {
+                    turnAddress = remoteAddress;
+                  }
                 }
+              }
+            }
 
-                if (localStats.remoteAddress && turnAddress) {
-                    localStats.remoteAddress = turnAddress;
+            for (i = 0; i < filter.length; i++) {
+              itemKeys = filter[i];
+              partList = [];
+              part = null;
+              for (j = 0; j < parts.length; j++) {
+                var fullMatch = true;
+                for (itemKey in itemKeys) {
+                  if (
+                    itemKeys.hasOwnProperty(itemKey) &&
+                    !partNames[j][itemKey]
+                  ) {
+                    fullMatch = false;
+                    break;
+                  }
                 }
-                callback(peerId, localStats);
-            });
-        }
-        else {
-            callback(peerId, {"statistics": self.getConstantString("statsNotSupported")});
-        }
+                if (fullMatch && parts[j]) {
+                  partList.push(parts[j]);
+                }
+              }
+              if (partList.length === 1) {
+                for (j = 0; j < partList.length; j++) {
+                  part = partList[j];
+                  if (part) {
+                    for (itemKey in itemKeys) {
+                      if (itemKeys.hasOwnProperty(itemKey)) {
+                        userKey = itemKeys[itemKey];
+                        localStats[userKey] = part.stat(itemKey);
+                      }
+                    }
+                  }
+                }
+              } else if (partList.length > 1) {
+                for (itemKey in itemKeys) {
+                  if (itemKeys.hasOwnProperty(itemKey)) {
+                    localStats[itemKeys[itemKey]] = [];
+                  }
+                }
+                for (j = 0; j < partList.length; j++) {
+                  part = partList[j];
+                  for (itemKey in itemKeys) {
+                    if (itemKeys.hasOwnProperty(itemKey)) {
+                      userKey = itemKeys[itemKey];
+                      localStats[userKey].push(part.stat(itemKey));
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (localStats.remoteAddress && turnAddress) {
+            localStats.remoteAddress = turnAddress;
+          }
+          callback(peerId, localStats);
+        });
+      } else {
+        callback(peerId, {
+          statistics: self.getConstantString("statsNotSupported"),
+        });
+      }
     }
 
     /**
@@ -1448,16 +1504,16 @@ var Easyrtc = function() {
      * @param {Object} filter depends on whether Chrome or Firefox is used. See the default filters for guidance.
      * It is still experimental.
      */
-    this.getPeerStatistics = function(easyrtcid, callback, filter) {
-        if (
-            adapter && adapter.browserDetails &&
-                adapter.browserDetails.browser === "firefox"
-        ) {
-            getFirefoxPeerStatistics(easyrtcid, callback, filter);
-        }
-        else {
-            getChromePeerStatistics(easyrtcid, callback, filter);
-        }
+    this.getPeerStatistics = function (easyrtcid, callback, filter) {
+      if (
+        adapter &&
+        adapter.browserDetails &&
+        adapter.browserDetails.browser === "firefox"
+      ) {
+        getFirefoxPeerStatistics(easyrtcid, callback, filter);
+      } else {
+        getChromePeerStatistics(easyrtcid, callback, filter);
+      }
     };
 
     /**
@@ -1466,32 +1522,29 @@ var Easyrtc = function() {
      * @param fields
      */
     function sendRoomApiFields(roomName, fields) {
-        var fieldAsString = JSON.stringify(fields);
-        JSON.parse(fieldAsString);
-        var dataToShip = {
-            msgType: "setRoomApiField",
-            msgData: {
-                setRoomApiField: {
-                    roomName: roomName,
-                    field: fields
-                }
-            }
-        };
+      var fieldAsString = JSON.stringify(fields);
+      JSON.parse(fieldAsString);
+      var dataToShip = {
+        msgType: "setRoomApiField",
+        msgData: {
+          setRoomApiField: {
+            roomName: roomName,
+            field: fields,
+          },
+        },
+      };
 
-        if (self.webSocket) {
-            self.webSocket.json.emit("easyrtcCmd", dataToShip,
-                    function(ackMsg) {
-                        if (ackMsg.msgType === "error") {
-                            self.showError(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
-                        }
-                    }
-            );
-        }
-        else {
-            logDebug("websocket failed because no connection to server");
+      if (self.webSocket) {
+        self.webSocket.emit("easyrtcCmd", dataToShip, function (ackMsg) {
+          if (ackMsg.msgType === "error") {
+            self.showError(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
+          }
+        });
+      } else {
+        logDebug("websocket failed because no connection to server");
 
-            throw "Attempt to send message without a valid connection to the server.";
-        }
+        throw "Attempt to send message without a valid connection to the server.";
+      }
     }
 
     /** @private */
@@ -1502,21 +1555,21 @@ var Easyrtc = function() {
      * @param {String} roomName
      */
     function enqueueSendRoomApi(roomName) {
-        //
-        // Rather than issue the send request immediately, we set a timer so we can accumulate other
-        // calls
-        //
-        if (self._roomApiFieldTimer[roomName]) {
-            clearTimeout(self._roomApiFieldTimer[roomName]);
-        }
+      //
+      // Rather than issue the send request immediately, we set a timer so we can accumulate other
+      // calls
+      //
+      if (self._roomApiFieldTimer[roomName]) {
+        clearTimeout(self._roomApiFieldTimer[roomName]);
+      }
 
-        self._roomApiFieldTimer[roomName] = setTimeout(function() {
-            var roomApiFields = self._roomApiFields[roomName];
-            if (roomApiFields) {
-                sendRoomApiFields(roomName, roomApiFields);
-            }
-            self._roomApiFieldTimer[roomName] = null;
-        }, 10);
+      self._roomApiFieldTimer[roomName] = setTimeout(function () {
+        var roomApiFields = self._roomApiFields[roomName];
+        if (roomApiFields) {
+          sendRoomApiFields(roomName, roomApiFields);
+        }
+        self._roomApiFieldTimer[roomName] = null;
+      }, 10);
     }
 
     /** Provide a set of application defined fields that will be part of this instances
@@ -1533,40 +1586,45 @@ var Easyrtc = function() {
      *      }
      *   });
      */
-    this.setRoomApiField = function(roomName, fieldName, fieldValue) {
-        //
-        // if we're not connected yet, we'll just cache the fields until we are.
-        //
-        if (!self._roomApiFields) {
-            self._roomApiFields = {};
+    this.setRoomApiField = function (roomName, fieldName, fieldValue) {
+      //
+      // if we're not connected yet, we'll just cache the fields until we are.
+      //
+      if (!self._roomApiFields) {
+        self._roomApiFields = {};
+      }
+      if (!fieldName && !fieldValue) {
+        clearTimeout(self._roomApiFieldTimer[roomName]);
+        delete self._roomApiFields[roomName];
+      } else {
+        if (!self._roomApiFields[roomName]) {
+          self._roomApiFields[roomName] = {};
         }
-        if (!fieldName && !fieldValue) {
-            clearTimeout(self._roomApiFieldTimer[roomName]);
-            delete self._roomApiFields[roomName];
+
+        if (fieldValue !== undefined && fieldValue !== null) {
+          if (typeof fieldValue === "object") {
+            try {
+              JSON.stringify(fieldValue);
+            } catch (jsonError) {
+              self.showError(
+                self.errCodes.DEVELOPER_ERR,
+                "easyrtc.setRoomApiField passed bad object "
+              );
+              return;
+            }
+          }
+          self._roomApiFields[roomName][fieldName] = {
+            fieldName: fieldName,
+            fieldValue: fieldValue,
+          };
         } else {
-
-            if (!self._roomApiFields[roomName]) {
-                self._roomApiFields[roomName] = {};
-            }
-
-            if (fieldValue !== undefined && fieldValue !== null) {
-                if (typeof fieldValue === "object") {
-                    try {
-                        JSON.stringify(fieldValue);
-                    } catch (jsonError) {
-                        self.showError(self.errCodes.DEVELOPER_ERR, "easyrtc.setRoomApiField passed bad object ");
-                        return;
-                    }
-                }
-                self._roomApiFields[roomName][fieldName] = {fieldName: fieldName, fieldValue: fieldValue};
-            } else {
-                delete self._roomApiFields[roomName][fieldName];
-            }
-
-            if (self.webSocketConnected) {
-                enqueueSendRoomApi(roomName);
-            }
+          delete self._roomApiFields[roomName][fieldName];
         }
+
+        if (self.webSocketConnected) {
+          enqueueSendRoomApi(roomName);
+        }
+      }
     };
 
     /**
@@ -1580,8 +1638,8 @@ var Easyrtc = function() {
      * @example
      *     easyrtc.showError("BAD_NAME", "Invalid username");
      */
-    this.showError = function(messageCode, message) {
-        self.onError({errorCode: messageCode, errorText: message});
+    this.showError = function (messageCode, message) {
+      self.onError({ errorCode: messageCode, errorText: message });
     };
 
     /** @private */
@@ -1597,53 +1655,53 @@ var Easyrtc = function() {
      * @example // Removing previously set handler:
      * easyrtc.setErrorListener(undefined);
      */
-    this.setErrorListener = function(handler) {
-        this._customErrorListener = handler;
+    this.setErrorListener = function (handler) {
+      this._customErrorListener = handler;
     };
 
     /**
      * @private
      * @param errorObject
      */
-    this.onError = function(errorObject) {
-        logDebug("saw error " + errorObject.errorText);
+    this.onError = function (errorObject) {
+      logDebug("saw error " + errorObject.errorText);
 
-        // Use custom error handler if set, rather than creating dialog
-        if (this._customErrorListener) {
-            logDebug("Using custom error handler");
-            this._customErrorListener(errorObject);
-            return;
-        }
+      // Use custom error handler if set, rather than creating dialog
+      if (this._customErrorListener) {
+        logDebug("Using custom error handler");
+        this._customErrorListener(errorObject);
+        return;
+      }
 
-        var errorDiv = document.getElementById('easyrtcErrorDialog');
-        var errorBody;
-        if (!errorDiv) {
-            errorDiv = document.createElement("div");
-            errorDiv.id = 'easyrtcErrorDialog';
-            var title = document.createElement("div");
-            title.innerHTML = "Error messages";
-            title.className = "easyrtcErrorDialog_title";
-            errorDiv.appendChild(title);
-            errorBody = document.createElement("div");
-            errorBody.id = "easyrtcErrorDialog_body";
-            errorDiv.appendChild(errorBody);
-            var clearButton = document.createElement("button");
-            clearButton.appendChild(document.createTextNode("Okay"));
-            clearButton.className = "easyrtcErrorDialog_okayButton";
-            clearButton.onclick = function() {
-                errorBody.innerHTML = ""; // remove all inner nodes
-                errorDiv.style.display = "none";
-            };
-            errorDiv.appendChild(clearButton);
-            document.body.appendChild(errorDiv);
-        }
+      var errorDiv = document.getElementById("easyrtcErrorDialog");
+      var errorBody;
+      if (!errorDiv) {
+        errorDiv = document.createElement("div");
+        errorDiv.id = "easyrtcErrorDialog";
+        var title = document.createElement("div");
+        title.innerHTML = "Error messages";
+        title.className = "easyrtcErrorDialog_title";
+        errorDiv.appendChild(title);
+        errorBody = document.createElement("div");
+        errorBody.id = "easyrtcErrorDialog_body";
+        errorDiv.appendChild(errorBody);
+        var clearButton = document.createElement("button");
+        clearButton.appendChild(document.createTextNode("Okay"));
+        clearButton.className = "easyrtcErrorDialog_okayButton";
+        clearButton.onclick = function () {
+          errorBody.innerHTML = ""; // remove all inner nodes
+          errorDiv.style.display = "none";
+        };
+        errorDiv.appendChild(clearButton);
+        document.body.appendChild(errorDiv);
+      }
 
-        errorBody = document.getElementById("easyrtcErrorDialog_body");
-        var messageNode = document.createElement("div");
-        messageNode.className = 'easyrtcErrorDialog_element';
-        messageNode.appendChild(document.createTextNode(errorObject.errorText));
-        errorBody.appendChild(messageNode);
-        errorDiv.style.display = "block";
+      errorBody = document.getElementById("easyrtcErrorDialog_body");
+      var messageNode = document.createElement("div");
+      messageNode.className = "easyrtcErrorDialog_element";
+      messageNode.appendChild(document.createTextNode(errorObject.errorText));
+      errorBody.appendChild(messageNode);
+      errorDiv.style.display = "block";
     };
 
     /** @private
@@ -1654,19 +1712,17 @@ var Easyrtc = function() {
     //     mediaStream - a media stream object.
     // The video object in Chrome expects a URL.
     //
-    this.createObjectURL = function(mediaStream) {
-        var errMessage;
-        if (window.URL && window.URL.createObjectURL) {
-            return window.URL.createObjectURL(mediaStream);
-        }
-        else if (window.webkitURL && window.webkitURL.createObjectURL) {
-            return window.webkit.createObjectURL(mediaStream);
-        }
-        else {
-            errMessage = "Your browsers does not support URL.createObjectURL.";
-            logDebug("saw exception " + errMessage);
-            throw errMessage;
-        }
+    this.createObjectURL = function (mediaStream) {
+      var errMessage;
+      if (window.URL && window.URL.createObjectURL) {
+        return window.URL.createObjectURL(mediaStream);
+      } else if (window.webkitURL && window.webkitURL.createObjectURL) {
+        return window.webkit.createObjectURL(mediaStream);
+      } else {
+        errMessage = "Your browsers does not support URL.createObjectURL.";
+        logDebug("saw exception " + errMessage);
+        throw errMessage;
+      }
     };
 
     /**
@@ -1676,18 +1732,18 @@ var Easyrtc = function() {
      * @example
      *   console.log( easyrtc.cleanId('&hello'));
      */
-    this.cleanId = function(idString) {
-        var MAP = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;'
-        };
-        if( !idString ) {
-            return "";
-        }
-        return idString.replace(/[&<>]/g, function(c) {
-            return MAP[c];
-        });
+    this.cleanId = function (idString) {
+      var MAP = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+      };
+      if (!idString) {
+        return "";
+      }
+      return idString.replace(/[&<>]/g, function (c) {
+        return MAP[c];
+      });
     };
 
     /**
@@ -1703,8 +1759,8 @@ var Easyrtc = function() {
      *       }
      *   });
      */
-    self.setRoomEntryListener = function(handler) {
-        self.roomEntryListener = handler;
+    self.setRoomEntryListener = function (handler) {
+      self.roomEntryListener = handler;
     };
 
     /**
@@ -1722,8 +1778,8 @@ var Easyrtc = function() {
      *      }
      *   });
      */
-    self.setRoomOccupantListener = function(listener) {
-        roomOccupantListener = listener;
+    self.setRoomOccupantListener = function (listener) {
+      roomOccupantListener = listener;
     };
 
     /**
@@ -1735,8 +1791,8 @@ var Easyrtc = function() {
      *         easyrtc.sendDataP2P(easyrtcid, "greeting", "hello");
      *    });
      */
-    this.setDataChannelOpenListener = function(listener) {
-        onDataChannelOpen = listener;
+    this.setDataChannelOpenListener = function (listener) {
+      onDataChannelOpen = listener;
     };
 
     /** Sets a callback that is called when a previously open data channel closes.
@@ -1747,8 +1803,8 @@ var Easyrtc = function() {
      *            ("No longer connected to " + easyrtc.idToName(easyrtcid));
      *    });
      */
-    this.setDataChannelCloseListener = function(listener) {
-        onDataChannelClose = listener;
+    this.setDataChannelCloseListener = function (listener) {
+      onDataChannelClose = listener;
     };
 
     /** Returns the number of live peer connections the client has.
@@ -1756,17 +1812,17 @@ var Easyrtc = function() {
      * @example
      *    ("You have " + easyrtc.getConnectionCount() + " peer connections");
      */
-    this.getConnectionCount = function() {
-        var count = 0;
-        var i;
-        for (i in peerConns) {
-            if (peerConns.hasOwnProperty(i)) {
-                if (self.getConnectStatus(i) === self.IS_CONNECTED) {
-                    count++;
-                }
-            }
+    this.getConnectionCount = function () {
+      var count = 0;
+      var i;
+      for (i in peerConns) {
+        if (peerConns.hasOwnProperty(i)) {
+          if (self.getConnectStatus(i) === self.IS_CONNECTED) {
+            count++;
+          }
         }
-        return count;
+      }
+      return count;
     };
 
     /** Sets the maximum length in bytes of P2P messages that can be sent.
@@ -1774,8 +1830,8 @@ var Easyrtc = function() {
      * @example
      *     easyrtc.setMaxP2PMessageLength(10000);
      */
-    this.setMaxP2PMessageLength = function(maxLength) {
-        this.maxP2PMessageLength = maxLength;
+    this.setMaxP2PMessageLength = function (maxLength) {
+      this.maxP2PMessageLength = maxLength;
     };
 
     /** Sets whether audio is transmitted by the local user in any subsequent calls.
@@ -1783,8 +1839,8 @@ var Easyrtc = function() {
      * @example
      *      easyrtc.enableAudio(false);
      */
-    this.enableAudio = function(enabled) {
-        self.audioEnabled = enabled;
+    this.enableAudio = function (enabled) {
+      self.audioEnabled = enabled;
     };
 
     /**
@@ -1793,8 +1849,8 @@ var Easyrtc = function() {
      * @example
      *      easyrtc.enableVideo(false);
      */
-    this.enableVideo = function(enabled) {
-        self.videoEnabled = enabled;
+    this.enableVideo = function (enabled) {
+      self.videoEnabled = enabled;
     };
 
     /**
@@ -1804,8 +1860,8 @@ var Easyrtc = function() {
      * @example
      *     easyrtc.enableDataChannels(true);
      */
-    this.enableDataChannels = function(enabled) {
-        dataEnabled = enabled;
+    this.enableDataChannels = function (enabled) {
+      dataEnabled = enabled;
     };
 
     /**
@@ -1814,13 +1870,13 @@ var Easyrtc = function() {
      * @param {Array} tracks - an array of MediaStreamTrack
      */
     function enableMediaTracks(enable, tracks) {
-        var i;
-        if (tracks) {
-            for (i = 0; i < tracks.length; i++) {
-                var track = tracks[i];
-                track.enabled = enable;
-            }
+      var i;
+      if (tracks) {
+        for (i = 0; i < tracks.length; i++) {
+          var track = tracks[i];
+          track.enabled = enable;
         }
+      }
     }
 
     /** @private */
@@ -1828,54 +1884,54 @@ var Easyrtc = function() {
     // fetches a stream by name. Treat a null/undefined streamName as "default".
     //
     function getLocalMediaStreamByName(streamName) {
-        if (!streamName) {
-            streamName = "default";
-        }
-        if (namedLocalMediaStreams.hasOwnProperty(streamName)) {
-            return namedLocalMediaStreams[streamName];
-        }
-        else {
-            return null;
-        }
+      if (!streamName) {
+        streamName = "default";
+      }
+      if (namedLocalMediaStreams.hasOwnProperty(streamName)) {
+        return namedLocalMediaStreams[streamName];
+      } else {
+        return null;
+      }
     }
 
     /**
      * Returns the user assigned id's of currently active local media streams.
      * @return {Array}
      */
-    this.getLocalMediaIds = function() {
-        return Object.keys(namedLocalMediaStreams);
+    this.getLocalMediaIds = function () {
+      return Object.keys(namedLocalMediaStreams);
     };
 
     /** @private */
     function buildMediaIds() {
-        var mediaMap = {};
-        var streamName;
-        for (streamName in namedLocalMediaStreams) {
-            if (namedLocalMediaStreams.hasOwnProperty(streamName)) {
-                mediaMap[streamName] = namedLocalMediaStreams[streamName].id || "default";
-            }
+      var mediaMap = {};
+      var streamName;
+      for (streamName in namedLocalMediaStreams) {
+        if (namedLocalMediaStreams.hasOwnProperty(streamName)) {
+          mediaMap[streamName] =
+            namedLocalMediaStreams[streamName].id || "default";
         }
-        return mediaMap;
+      }
+      return mediaMap;
     }
 
     /** @private */
     function registerLocalMediaStreamByName(stream, streamName) {
-        var roomName;
-        if (!streamName) {
-            streamName = "default";
+      var roomName;
+      if (!streamName) {
+        streamName = "default";
+      }
+      stream.streamName = streamName;
+      namedLocalMediaStreams[streamName] = stream;
+      if (streamName !== "default") {
+        var mediaIds = buildMediaIds(),
+          roomData = self.roomData;
+        for (roomName in roomData) {
+          if (roomData.hasOwnProperty(roomName)) {
+            self.setRoomApiField(roomName, "mediaIds", mediaIds);
+          }
         }
-        stream.streamName = streamName;
-        namedLocalMediaStreams[streamName] = stream;
-        if (streamName !== "default") {
-            var mediaIds = buildMediaIds(),
-                roomData = self.roomData;
-            for (roomName in roomData) {
-                if (roomData.hasOwnProperty(roomName)) {
-                    self.setRoomApiField(roomName, "mediaIds", mediaIds);
-                }
-            }
-        }
+      }
     }
 
     /**
@@ -1883,8 +1939,8 @@ var Easyrtc = function() {
      * library) to be used within easyrtc. Tracking when it closes
      * must be done by the supplying party.
      */
-    this.register3rdPartyLocalMediaStream = function(stream, streamName) {
-       return registerLocalMediaStreamByName(stream, streamName);
+    this.register3rdPartyLocalMediaStream = function (stream, streamName) {
+      return registerLocalMediaStreamByName(stream, streamName);
     };
 
     /** @private */
@@ -1892,115 +1948,113 @@ var Easyrtc = function() {
     // look up a stream's name from the stream.id
     //
     function getNameOfRemoteStream(easyrtcId, webrtcStreamId) {
-        var roomName;
-        var mediaIds;
-        var streamName;
-        if (!webrtcStreamId) {
-            webrtcStreamId = "default";
+      var roomName;
+      var mediaIds;
+      var streamName;
+      if (!webrtcStreamId) {
+        webrtcStreamId = "default";
+      }
+      if (peerConns[easyrtcId]) {
+        streamName = peerConns[easyrtcId].remoteStreamIdToName[webrtcStreamId];
+        if (streamName) {
+          return streamName;
         }
-        if (peerConns[easyrtcId]) {
-            streamName = peerConns[easyrtcId].remoteStreamIdToName[webrtcStreamId];
-            if (streamName) {
-                return streamName;
+      }
+
+      for (roomName in self.roomData) {
+        if (self.roomData.hasOwnProperty(roomName)) {
+          mediaIds = self.getRoomApiField(roomName, easyrtcId, "mediaIds");
+
+          if (!mediaIds) {
+            continue;
+          }
+
+          for (streamName in mediaIds) {
+            if (
+              mediaIds.hasOwnProperty(streamName) &&
+              (mediaIds[streamName] === webrtcStreamId || // Full match
+                webrtcStreamId.indexOf(mediaIds[streamName]) === 0 || // Partial match
+                mediaIds[streamName].indexOf(webrtcStreamId) === 0) // Partial match
+            ) {
+              return streamName;
             }
-        }
+          }
 
-        for (roomName in self.roomData) {
-            if (self.roomData.hasOwnProperty(roomName)) {
-
-                mediaIds = self.getRoomApiField(roomName, easyrtcId, "mediaIds");
-
-                if (!mediaIds) {
-                    continue;
-                }
-
-                for (streamName in mediaIds) {
-                    if (
-                        mediaIds.hasOwnProperty(streamName) && (
-                            mediaIds[streamName] === webrtcStreamId || // Full match
-                                webrtcStreamId.indexOf(mediaIds[streamName]) === 0 || // Partial match
-                                  mediaIds[streamName].indexOf(webrtcStreamId) === 0 // Partial match
-                        )
-                    ) {
-                        return streamName;
-                    }
-                }
-
-                //
-                // a stream from chrome to firefox will be missing it's id/label.
-                // there is no correct solution.
-                //
-                if (
-                    adapter && adapter.browserDetails &&
-                        adapter.browserDetails.browser === "firefox"
-                ) {
-
-                   // if there is a stream called default, return it in preference
-                   if (mediaIds["default"]) {
-                       return "default";
-                   }
-
-                   //
-                   // otherwise return the first name we find. If there is more than
-                   // one, complain to Mozilla.
-                   //
-                   for(var anyName in mediaIds) {
-                        if (mediaIds.hasOwnProperty(anyName)) {
-                            return anyName;
-                        }
-                   }
-                }
+          //
+          // a stream from chrome to firefox will be missing it's id/label.
+          // there is no correct solution.
+          //
+          if (
+            adapter &&
+            adapter.browserDetails &&
+            adapter.browserDetails.browser === "firefox"
+          ) {
+            // if there is a stream called default, return it in preference
+            if (mediaIds["default"]) {
+              return "default";
             }
-        }
 
-        return undefined;
+            //
+            // otherwise return the first name we find. If there is more than
+            // one, complain to Mozilla.
+            //
+            for (var anyName in mediaIds) {
+              if (mediaIds.hasOwnProperty(anyName)) {
+                return anyName;
+              }
+            }
+          }
+        }
+      }
+
+      return undefined;
     }
 
-    this.getNameOfRemoteStream = function(easyrtcId, webrtcStream){
-        if(typeof webrtcStream === "string") {
-            return getNameOfRemoteStream(easyrtcId, webrtcStream);
-        }
-        else if( webrtcStream.id) {
-            return getNameOfRemoteStream(easyrtcId, webrtcStream.id);
-        }
+    this.getNameOfRemoteStream = function (easyrtcId, webrtcStream) {
+      if (typeof webrtcStream === "string") {
+        return getNameOfRemoteStream(easyrtcId, webrtcStream);
+      } else if (webrtcStream.id) {
+        return getNameOfRemoteStream(easyrtcId, webrtcStream.id);
+      }
     };
 
     /** @private */
     function closeLocalMediaStreamByName(streamName) {
-        if (!streamName) {
-            streamName = "default";
+      if (!streamName) {
+        streamName = "default";
+      }
+      var stream = self.getLocalStream(streamName);
+      if (!stream) {
+        return;
+      }
+      var streamId = stream.id || "default";
+      var id;
+      var roomName;
+      if (namedLocalMediaStreams[streamName]) {
+        for (id in peerConns) {
+          if (peerConns.hasOwnProperty(id)) {
+            try {
+              peerConns[id].pc.removeStream(stream);
+            } catch (err) {}
+            self.sendPeerMessage(id, "__closingMediaStream", {
+              streamId: streamId,
+              streamName: streamName,
+            });
+          }
         }
-        var stream = self.getLocalStream(streamName);
-        if (!stream) {
-            return;
-        }
-        var streamId = stream.id || "default";
-        var id;
-        var roomName;
-        if (namedLocalMediaStreams[streamName]) {
 
-            for (id in peerConns) {
-                if (peerConns.hasOwnProperty(id)) {
-                    try {
-                        peerConns[id].pc.removeStream(stream);
-                    } catch (err) {
-                    }
-                    self.sendPeerMessage(id, "__closingMediaStream", {streamId: streamId, streamName: streamName});
-                }
+        stopStream(namedLocalMediaStreams[streamName]);
+        delete namedLocalMediaStreams[streamName];
+
+        if (streamName !== "default") {
+          var mediaIds = buildMediaIds();
+          for (roomName in self.roomData) {
+            if (self.roomData.hasOwnProperty(roomName)) {
+              self.setRoomApiField(roomName, "mediaIds", mediaIds);
             }
-
-            stopStream(namedLocalMediaStreams[streamName]);
-            delete namedLocalMediaStreams[streamName];
-
-            if (streamName !== "default") {
-                var mediaIds = buildMediaIds();
-                for (roomName in self.roomData) {
-                    if (self.roomData.hasOwnProperty(roomName)) {
-                        self.setRoomApiField(roomName, "mediaIds", mediaIds);
-                    }
-                }
-            }
+          }
         }
+      }
     }
 
     /**
@@ -2008,8 +2062,8 @@ var Easyrtc = function() {
      * of a camera before reacquiring it at a different resolution.
      * @param {String} streamName - an option stream name.
      */
-    this.closeLocalMediaStream = function(streamName) {
-        return closeLocalMediaStreamByName(streamName);
+    this.closeLocalMediaStream = function (streamName) {
+      return closeLocalMediaStreamByName(streamName);
     };
 
     /**
@@ -2024,11 +2078,11 @@ var Easyrtc = function() {
      * @param {Boolean} enable - true to enable the camera, false to disable it.
      * @param {String} streamName - the name of the stream, optional.
      */
-    this.enableCamera = function(enable, streamName) {
-        var stream = getLocalMediaStreamByName(streamName);
-        if (stream && stream.getVideoTracks) {
-            enableMediaTracks(enable, stream.getVideoTracks());
-        }
+    this.enableCamera = function (enable, streamName) {
+      var stream = getLocalMediaStreamByName(streamName);
+      if (stream && stream.getVideoTracks) {
+        enableMediaTracks(enable, stream.getVideoTracks());
+      }
     };
 
     /**
@@ -2038,11 +2092,11 @@ var Easyrtc = function() {
      * @param {Boolean} enable - true to enable the microphone, false to disable it.
      * @param {String} streamName - an optional streamName
      */
-    this.enableMicrophone = function(enable, streamName) {
-        var stream = getLocalMediaStreamByName(streamName);
-        if (stream && stream.getAudioTracks) {
-            enableMediaTracks(enable, stream.getAudioTracks());
-        }
+    this.enableMicrophone = function (enable, streamName) {
+      var stream = getLocalMediaStreamByName(streamName);
+      if (stream && stream.getAudioTracks) {
+        enableMediaTracks(enable, stream.getAudioTracks());
+      }
     };
 
     /**
@@ -2050,21 +2104,19 @@ var Easyrtc = function() {
      * @param {String} videoObjectName - A DOMObject or the id of the DOMObject.
      * @param {Boolean} mute - true to mute the video object, false to unmute it.
      */
-    this.muteVideoObject = function(videoObjectName, mute) {
-        var videoObject;
-        if (typeof (videoObjectName) === 'string') {
-            videoObject = document.getElementById(videoObjectName);
-            if (!videoObject) {
-                throw "Unknown video object " + videoObjectName;
-            }
+    this.muteVideoObject = function (videoObjectName, mute) {
+      var videoObject;
+      if (typeof videoObjectName === "string") {
+        videoObject = document.getElementById(videoObjectName);
+        if (!videoObject) {
+          throw "Unknown video object " + videoObjectName;
         }
-        else if (!videoObjectName) {
-            throw "muteVideoObject passed a null";
-        }
-        else {
-            videoObject = videoObjectName;
-        }
-        videoObject.muted = !!mute;
+      } else if (!videoObjectName) {
+        throw "muteVideoObject passed a null";
+      } else {
+        videoObject = videoObjectName;
+      }
+      videoObject.muted = !!mute;
     };
 
     /**
@@ -2076,12 +2128,12 @@ var Easyrtc = function() {
      *  @example
      *      document.getElementById("myVideo").src = easyrtc.getLocalStreamAsUrl();
      */
-    self.getLocalStreamAsUrl = function(streamName) {
-        var stream = getLocalMediaStreamByName(streamName);
-        if (stream === null) {
-            throw "Developer error: attempt to get a MediaStream without invoking easyrtc.initMediaSource successfully";
-        }
-        return self.createObjectURL(stream);
+    self.getLocalStreamAsUrl = function (streamName) {
+      var stream = getLocalMediaStreamByName(streamName);
+      if (stream === null) {
+        throw "Developer error: attempt to get a MediaStream without invoking easyrtc.initMediaSource successfully";
+      }
+      return self.createObjectURL(stream);
     };
 
     /**
@@ -2093,8 +2145,8 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.setVideoObjectSrc( document.getElementById("myVideo"), easyrtc.getLocalStream());
      */
-    this.getLocalStream = function(streamName) {
-        return getLocalMediaStreamByName(streamName) || null;
+    this.getLocalStream = function (streamName) {
+      return getLocalMediaStreamByName(streamName) || null;
     };
 
     /** Clears the media stream on a video object.
@@ -2104,21 +2156,20 @@ var Easyrtc = function() {
      *    easyrtc.clearMediaStream( document.getElementById('selfVideo'));
      *
      */
-    this.clearMediaStream = function(element) {
+    this.clearMediaStream = function (element) {
+      // Prevent The play() request was interrupted by a new load request.
+      if (element && element.pause) {
+        element.pause();
+      }
 
-        // Prevent The play() request was interrupted by a new load request.
-        if (element && element.pause) {
-            element.pause();
-        }
-
-        if (typeof element.srcObject !== 'undefined') {
-            element.srcObject = null;
-        } else if (typeof element.mozSrcObject !== 'undefined') {
-            element.mozSrcObject = null;
-        } else if (typeof element.src !== 'undefined') {
-            //noinspection JSUndefinedPropertyAssignment
-            element.src = "";
-        }
+      if (typeof element.srcObject !== "undefined") {
+        element.srcObject = null;
+      } else if (typeof element.mozSrcObject !== "undefined") {
+        element.mozSrcObject = null;
+      } else if (typeof element.src !== "undefined") {
+        //noinspection JSUndefinedPropertyAssignment
+        element.src = "";
+      }
     };
 
     /**
@@ -2136,21 +2187,20 @@ var Easyrtc = function() {
      *    easyrtc.setVideoObjectSrc( document.getElementById("myVideo"), easyrtc.getLocalStream());
      *
      */
-    this.setVideoObjectSrc = function(element, stream) {
-        if (stream && stream !== "") {
-            element.autoplay = true;
+    this.setVideoObjectSrc = function (element, stream) {
+      if (stream && stream !== "") {
+        element.autoplay = true;
 
-            if (typeof element.srcObject !== 'undefined') {
-                element.srcObject = stream;
-            } else if (typeof element.mozSrcObject !== 'undefined') {
-                element.mozSrcObject = self.createObjectURL(stream);
-            } else if (typeof element.src !== 'undefined') {
-                element.src = self.createObjectURL(stream);
-            }
+        if (typeof element.srcObject !== "undefined") {
+          element.srcObject = stream;
+        } else if (typeof element.mozSrcObject !== "undefined") {
+          element.mozSrcObject = self.createObjectURL(stream);
+        } else if (typeof element.src !== "undefined") {
+          element.src = self.createObjectURL(stream);
         }
-        else {
-            self.clearMediaStream(element);
-        }
+      } else {
+        self.clearMediaStream(element);
+      }
     };
 
     /**
@@ -2164,64 +2214,72 @@ var Easyrtc = function() {
      *             easyrtc.getLocalStream("camera1").getVideoTracks(),
      *             easyrtc.getLocalStream("camera2").getAudioTracks());
      */
-    this.buildLocalMediaStream = function(streamName, audioTracks, videoTracks) {
-        var i;
-        if (typeof streamName !== 'string') {
-            self.showError(self.errCodes.DEVELOPER_ERR,
-               "easyrtc.buildLocalMediaStream not supplied a stream name");
-            return null;
+    this.buildLocalMediaStream = function (
+      streamName,
+      audioTracks,
+      videoTracks
+    ) {
+      var i;
+      if (typeof streamName !== "string") {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "easyrtc.buildLocalMediaStream not supplied a stream name"
+        );
+        return null;
+      }
+
+      var streamToClone = null;
+      for (var key in namedLocalMediaStreams) {
+        if (namedLocalMediaStreams.hasOwnProperty(key)) {
+          streamToClone = namedLocalMediaStreams[key];
+          if (streamToClone) {
+            break;
+          }
         }
-
-         var streamToClone = null;
-         for(var key in namedLocalMediaStreams ) {
-            if( namedLocalMediaStreams.hasOwnProperty(key)) {
-              streamToClone = namedLocalMediaStreams[key];
-              if(streamToClone) {
-                break;
-              }
+      }
+      if (!streamToClone) {
+        for (key in peerConns) {
+          if (peerConns.hasOwnProperty(key)) {
+            var remoteStreams = peerConns[key].pc.getRemoteStreams();
+            if (remoteStreams && remoteStreams.length > 0) {
+              streamToClone = remoteStreams[0];
             }
-         }
-         if( !streamToClone ) {
-            for(key in peerConns) {
-                if (peerConns.hasOwnProperty(key)) {
-                    var remoteStreams = peerConns[key].pc.getRemoteStreams();
-                    if( remoteStreams && remoteStreams.length > 0 ) {
-                        streamToClone = remoteStreams[0];
-                    }
-                }
-            }
-         }
-         if( !streamToClone ){
-            self.showError(self.errCodes.DEVELOPER_ERR,
-             "Attempt to create a mediastream without one to clone from");
-            return null;
-         }
-
-         //
-         // clone whatever mediastream we found, and remove any of it's
-         // tracks.
-         //
-         var mediaClone = streamToClone.clone();
-         var oldTracks = mediaClone.getTracks();
-
-        if (audioTracks) {
-            for (i = 0; i < audioTracks.length; i++) {
-                mediaClone.addTrack(audioTracks[i].clone());
-            }
+          }
         }
+      }
+      if (!streamToClone) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to create a mediastream without one to clone from"
+        );
+        return null;
+      }
 
-        if (videoTracks) {
-            for (i = 0; i < videoTracks.length; i++) {
-                mediaClone.addTrack(videoTracks[i].clone());
-            }
+      //
+      // clone whatever mediastream we found, and remove any of it's
+      // tracks.
+      //
+      var mediaClone = streamToClone.clone();
+      var oldTracks = mediaClone.getTracks();
+
+      if (audioTracks) {
+        for (i = 0; i < audioTracks.length; i++) {
+          mediaClone.addTrack(audioTracks[i].clone());
         }
+      }
 
-        for( i = 0; i < oldTracks.length; i++ ) {
-            mediaClone.removeTrack(oldTracks[i]);
+      if (videoTracks) {
+        for (i = 0; i < videoTracks.length; i++) {
+          mediaClone.addTrack(videoTracks[i].clone());
         }
+      }
 
-        registerLocalMediaStreamByName(mediaClone, streamName);
-        return mediaClone;
+      for (i = 0; i < oldTracks.length; i++) {
+        mediaClone.removeTrack(oldTracks[i]);
+      }
+
+      registerLocalMediaStreamByName(mediaClone, streamName);
+      return mediaClone;
     };
 
     /* @private*/
@@ -2232,69 +2290,64 @@ var Easyrtc = function() {
      *       easyrtc.loadStylesheet();
      *
      */
-    this.loadStylesheet = function() {
-
-        //
-        // check to see if we already have an easyrtc.css file loaded
-        // if we do, we can exit immediately.
-        //
-        var links = document.getElementsByTagName("link");
-        var cssIndex, css;
-        for (cssIndex in links) {
-            if (links.hasOwnProperty(cssIndex)) {
-                css = links[cssIndex];
-                if (css.href && (css.href.match(/\/easyrtc.css/))) {
-                    return;
-                }
-            }
+    this.loadStylesheet = function () {
+      //
+      // check to see if we already have an easyrtc.css file loaded
+      // if we do, we can exit immediately.
+      //
+      var links = document.getElementsByTagName("link");
+      var cssIndex, css;
+      for (cssIndex in links) {
+        if (links.hasOwnProperty(cssIndex)) {
+          css = links[cssIndex];
+          if (css.href && css.href.match(/\/easyrtc.css/)) {
+            return;
+          }
         }
-        //
-        // add the easyrtc.css file since it isn't present
-        //
-        var easySheet = document.createElement("link");
-        easySheet.setAttribute("rel", "stylesheet");
-        easySheet.setAttribute("type", "text/css");
-        easySheet.setAttribute("href", "/easyrtc/easyrtc.css");
-        var headSection = document.getElementsByTagName("head")[0];
-        var firstHead = headSection.childNodes[0];
-        headSection.insertBefore(easySheet, firstHead);
+      }
+      //
+      // add the easyrtc.css file since it isn't present
+      //
+      var easySheet = document.createElement("link");
+      easySheet.setAttribute("rel", "stylesheet");
+      easySheet.setAttribute("type", "text/css");
+      easySheet.setAttribute("href", "/easyrtc/easyrtc.css");
+      var headSection = document.getElementsByTagName("head")[0];
+      var firstHead = headSection.childNodes[0];
+      headSection.insertBefore(easySheet, firstHead);
     };
 
     /**
      * @private
      * @param {String} x
      */
-    this.formatError = function(x) {
-        var name, result;
-        if (x === null || typeof x === 'undefined') {
-            return "null";
-        }
-        if (typeof x === 'string') {
-            return x;
-        }
-        else if (x.type && x.description) {
-            return x.type + " : " + x.description;
-        }
-        else if (typeof x === 'object') {
-            try {
-                return JSON.stringify(x);
+    this.formatError = function (x) {
+      var name, result;
+      if (x === null || typeof x === "undefined") {
+        return "null";
+      }
+      if (typeof x === "string") {
+        return x;
+      } else if (x.type && x.description) {
+        return x.type + " : " + x.description;
+      } else if (typeof x === "object") {
+        try {
+          return JSON.stringify(x);
+        } catch (oops) {
+          result = "{";
+          for (name in x) {
+            if (x.hasOwnProperty(name)) {
+              if (typeof x[name] === "string") {
+                result = result + name + "='" + x[name] + "' ";
+              }
             }
-            catch (oops) {
-                result = "{";
-                for (name in x) {
-                    if (x.hasOwnProperty(name)) {
-                        if (typeof x[name] === 'string') {
-                            result = result + name + "='" + x[name] + "' ";
-                        }
-                    }
-                }
-                result = result + "}";
-                return result;
-            }
+          }
+          result = result + "}";
+          return result;
         }
-        else {
-            return "Strange case";
-        }
+      } else {
+        return "Strange case";
+      }
     };
 
     /**
@@ -2315,156 +2368,177 @@ var Easyrtc = function() {
      *               easyrtc.showError(errorCode, errorText);
      *          });
      */
-    this.initMediaSource = function(successCallback, errorCallback, streamName) {
+    this.initMediaSource = function (
+      successCallback,
+      errorCallback,
+      streamName
+    ) {
+      logDebug("about to request local media");
 
-        logDebug("about to request local media");
+      if (!streamName) {
+        streamName = "default";
+      }
 
-        if (!streamName) {
-            streamName = "default";
+      haveAudioVideo = {
+        audio: self.audioEnabled,
+        video: self.videoEnabled,
+      };
+
+      if (!errorCallback) {
+        errorCallback = function (errorCode, errorText) {
+          var message =
+            "easyrtc.initMediaSource: " + self.formatError(errorText);
+          logDebug(message);
+          self.showError(self.errCodes.MEDIA_ERR, message);
+        };
+      }
+
+      if (!self.supportsGetUserMedia()) {
+        errorCallback(
+          self.errCodes.MEDIA_ERR,
+          self.getConstantString("noWebrtcSupport")
+        );
+        return;
+      }
+
+      if (!successCallback) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "easyrtc.initMediaSource not supplied a successCallback"
+        );
+        return;
+      }
+
+      var mode = self.getUserMediaConstraints();
+      /** @private
+       * @param {Object} stream - A mediaStream object.
+       *  */
+      var onUserMediaSuccess = function (stream) {
+        logDebug("getUserMedia success callback entered");
+        logDebug("successfully got local media");
+
+        stream.streamName = streamName;
+        registerLocalMediaStreamByName(stream, streamName);
+        var videoObj, triesLeft, tryToGetSize;
+        if (haveAudioVideo.video) {
+          videoObj = document.createElement("video");
+          videoObj.style.display = "none";
+          document.body.appendChild(videoObj);
+          videoObj.muted = true;
+          triesLeft = 30;
+          tryToGetSize = function () {
+            if (videoObj.videoWidth > 0 || triesLeft < 0) {
+              self.nativeVideoWidth = videoObj.videoWidth;
+              self.nativeVideoHeight = videoObj.videoHeight;
+              if (
+                self._desiredVideoProperties.height &&
+                (self.nativeVideoHeight !==
+                  self._desiredVideoProperties.height ||
+                  self.nativeVideoWidth !== self._desiredVideoProperties.width)
+              ) {
+                self.showError(
+                  self.errCodes.MEDIA_WARNING,
+                  self.format(
+                    self.getConstantString("resolutionWarning"),
+                    self._desiredVideoProperties.width,
+                    self._desiredVideoProperties.height,
+                    self.nativeVideoWidth,
+                    self.nativeVideoHeight
+                  )
+                );
+              }
+
+              self.clearMediaStream(videoObj);
+
+              if (videoObj.removeNode) {
+                videoObj.removeNode(true);
+              } else {
+                document.body.removeChild(videoObj);
+              }
+
+              updateConfigurationInfo();
+
+              if (successCallback) {
+                successCallback(stream);
+              }
+            } else {
+              triesLeft -= 1;
+              setTimeout(tryToGetSize, 300);
+            }
+          };
+          self.setVideoObjectSrc(videoObj, stream);
+          tryToGetSize();
+        } else {
+          updateConfigurationInfo();
+          if (successCallback) {
+            successCallback(stream);
+          }
         }
+      };
 
+      /**
+       * @private
+       * @param {String} error
+       */
+      var onUserMediaError = function (error) {
+        logDebug("getusermedia failed");
+        logDebug("failed to get local media");
+        var errText;
+        if (typeof error === "string") {
+          errText = error;
+        } else if (error.name) {
+          errText = error.name;
+        } else {
+          errText = "Unknown";
+        }
+        if (errorCallback) {
+          logDebug("invoking error callback", errText);
+          errorCallback(
+            self.errCodes.MEDIA_ERR,
+            self.format(self.getConstantString("gumFailed"), errText)
+          );
+        }
+        closeLocalMediaStreamByName(streamName);
         haveAudioVideo = {
-            audio: self.audioEnabled,
-            video: self.videoEnabled
+          audio: false,
+          video: false,
         };
+        updateConfigurationInfo();
+      };
 
-        if (!errorCallback) {
-            errorCallback = function(errorCode, errorText) {
-                var message = "easyrtc.initMediaSource: " + self.formatError(errorText);
-                logDebug(message);
-                self.showError(self.errCodes.MEDIA_ERR, message);
-            };
+      if (!self.audioEnabled && !self.videoEnabled) {
+        onUserMediaError(self.getConstantString("requireAudioOrVideo"));
+        return;
+      }
+
+      function getCurrentTime() {
+        return new Date().getTime();
+      }
+
+      var firstCallTime;
+      function tryAgain(err) {
+        var currentTime = getCurrentTime();
+        if (currentTime < firstCallTime + 1000) {
+          logDebug("Trying getUserMedia a second time");
+          navigator.mediaDevices
+            .getUserMedia(mode)
+            .then(onUserMediaSuccess)
+            .catch(onUserMediaError);
+        } else {
+          onUserMediaError(err);
         }
+      }
 
-        if (!self.supportsGetUserMedia()) {
-            errorCallback(self.errCodes.MEDIA_ERR, self.getConstantString("noWebrtcSupport"));
-            return;
-        }
-
-        if (!successCallback) {
-            self.showError(self.errCodes.DEVELOPER_ERR,
-                    "easyrtc.initMediaSource not supplied a successCallback");
-            return;
-        }
-
-        var mode = self.getUserMediaConstraints();
-        /** @private
-         * @param {Object} stream - A mediaStream object.
-         *  */
-        var onUserMediaSuccess = function(stream) {
-            logDebug("getUserMedia success callback entered");
-            logDebug("successfully got local media");
-
-            stream.streamName = streamName;
-            registerLocalMediaStreamByName(stream, streamName);
-            var videoObj, triesLeft, tryToGetSize;
-            if (haveAudioVideo.video) {
-                videoObj = document.createElement('video');
-                videoObj.style.display = "none";
-                document.body.appendChild(videoObj);
-                videoObj.muted = true;
-                triesLeft = 30;
-                tryToGetSize = function() {
-                    if (videoObj.videoWidth > 0 || triesLeft < 0) {
-                        self.nativeVideoWidth = videoObj.videoWidth;
-                        self.nativeVideoHeight = videoObj.videoHeight;
-                        if (self._desiredVideoProperties.height &&
-                                (self.nativeVideoHeight !== self._desiredVideoProperties.height ||
-                                        self.nativeVideoWidth !== self._desiredVideoProperties.width)) {
-                            self.showError(self.errCodes.MEDIA_WARNING,
-                                    self.format(self.getConstantString("resolutionWarning"),
-                                    self._desiredVideoProperties.width, self._desiredVideoProperties.height,
-                                    self.nativeVideoWidth, self.nativeVideoHeight));
-                        }
-
-                        self.clearMediaStream(videoObj);
-
-                        if (videoObj.removeNode) {
-                            videoObj.removeNode(true);
-                        }
-                        else {
-                            document.body.removeChild(videoObj);
-                        }
-
-                        updateConfigurationInfo();
-
-                        if (successCallback) {
-                            successCallback(stream);
-                        }
-                    }
-                    else {
-                        triesLeft -= 1;
-                        setTimeout(tryToGetSize, 300);
-                    }
-                };
-                self.setVideoObjectSrc(videoObj, stream);
-                tryToGetSize();
-            }
-            else {
-                updateConfigurationInfo();
-                if (successCallback) {
-                    successCallback(stream);
-                }
-            }
-        };
-
-        /**
-         * @private
-         * @param {String} error
-         */
-        var onUserMediaError = function(error) {
-            logDebug("getusermedia failed");
-            logDebug("failed to get local media");
-            var errText;
-            if (typeof error === 'string') {
-                errText = error;
-            }
-            else if (error.name) {
-                errText = error.name;
-            }
-            else {
-                errText = "Unknown";
-            }
-            if (errorCallback) {
-                logDebug("invoking error callback", errText);
-                errorCallback(self.errCodes.MEDIA_ERR, self.format(self.getConstantString("gumFailed"), errText));
-            }
-            closeLocalMediaStreamByName(streamName);
-            haveAudioVideo = {
-                audio: false,
-                video: false
-            };
-            updateConfigurationInfo();
-        };
-
-        if (!self.audioEnabled && !self.videoEnabled) {
-            onUserMediaError(self.getConstantString("requireAudioOrVideo"));
-            return;
-        }
-
-        function getCurrentTime() {
-            return (new Date()).getTime();
-        }
-
-        var firstCallTime;
-        function tryAgain(err) {
-            var currentTime = getCurrentTime();
-            if (currentTime < firstCallTime + 1000) {
-                logDebug("Trying getUserMedia a second time");
-                navigator.mediaDevices.getUserMedia(mode).then(onUserMediaSuccess).catch(onUserMediaError);
-            }
-            else {
-                onUserMediaError(err);
-            }
-        }
-
-        //
-        // getUserMedia sometimes fails the first time I call it. I suspect it's a page loading
-        // issue. So I'm going to try adding a 1 second delay to allow things to settle down first.
-        // In addition, I'm going to try again after 3 seconds.
-        //
-        firstCallTime = getCurrentTime();
-        navigator.mediaDevices.getUserMedia(mode).then(onUserMediaSuccess).catch(tryAgain);
+      //
+      // getUserMedia sometimes fails the first time I call it. I suspect it's a page loading
+      // issue. So I'm going to try adding a 1 second delay to allow things to settle down first.
+      // In addition, I'm going to try again after 3 seconds.
+      //
+      firstCallTime = getCurrentTime();
+      navigator.mediaDevices
+        .getUserMedia(mode)
+        .then(onUserMediaSuccess)
+        .catch(tryAgain);
     };
 
     /**
@@ -2488,8 +2562,8 @@ var Easyrtc = function() {
      *           }
      *      });
      */
-    this.setAcceptChecker = function(acceptCheck) {
-        self.acceptCheck = acceptCheck;
+    this.setAcceptChecker = function (acceptCheck) {
+      self.acceptCheck = acceptCheck;
     };
 
     /**
@@ -2502,8 +2576,8 @@ var Easyrtc = function() {
      *     easyrtc.setVideoObjectSrc( document.getElementById("callerVideo"), stream);
      *  });
      */
-    this.setStreamAcceptor = function(acceptor) {
-        self.streamAcceptor = acceptor;
+    this.setStreamAcceptor = function (acceptor) {
+      self.streamAcceptor = acceptor;
     };
 
     /** Sets the easyrtc.onError field to a user specified function.
@@ -2513,8 +2587,8 @@ var Easyrtc = function() {
      *        document.getElementById("errMessageDiv").innerHTML += errorObject.errorText;
      *    });
      */
-    self.setOnError = function(errListener) {
-        self.onError = errListener;
+    self.setOnError = function (errListener) {
+      self.onError = errListener;
     };
 
     /**
@@ -2533,8 +2607,8 @@ var Easyrtc = function() {
      *         }
      *     });
      */
-    this.setCallCancelled = function(callCancelled) {
-        self.callCancelled = callCancelled;
+    this.setCallCancelled = function (callCancelled) {
+      self.callCancelled = callCancelled;
     };
 
     /**  Sets a callback to receive notification of a media stream closing. The usual
@@ -2547,8 +2621,8 @@ var Easyrtc = function() {
      *         ( easyrtc.idToName(easyrtcid) + " closed stream " + stream.id + " " + streamName);
      *     });
      */
-    this.setOnStreamClosed = function(onStreamClosed) {
-        self.onStreamClosed = onStreamClosed;
+    this.setOnStreamClosed = function (onStreamClosed) {
+      self.onStreamClosed = onStreamClosed;
     };
 
     /**
@@ -2578,21 +2652,19 @@ var Easyrtc = function() {
      *
      *
      */
-    this.setPeerListener = function(listener, msgType, source) {
-        if (!msgType) {
-            receivePeer.cb = listener;
+    this.setPeerListener = function (listener, msgType, source) {
+      if (!msgType) {
+        receivePeer.cb = listener;
+      } else {
+        if (!receivePeer.msgTypes[msgType]) {
+          receivePeer.msgTypes[msgType] = { sources: {} };
         }
-        else {
-            if (!receivePeer.msgTypes[msgType]) {
-                receivePeer.msgTypes[msgType] = {sources: {}};
-            }
-            if (!source) {
-                receivePeer.msgTypes[msgType].cb = listener;
-            }
-            else {
-                receivePeer.msgTypes[msgType].sources[source] = {cb: listener};
-            }
+        if (!source) {
+          receivePeer.msgTypes[msgType].cb = listener;
+        } else {
+          receivePeer.msgTypes[msgType].sources[source] = { cb: listener };
         }
+      }
     };
     /* This function serves to distribute peer messages to the various peer listeners */
     /** @private
@@ -2600,28 +2672,40 @@ var Easyrtc = function() {
      * @param {Object} msg - needs to contain a msgType and a msgData field.
      * @param {Object} targeting
      */
-    this.receivePeerDistribute = function(easyrtcid, msg, targeting) {
-        var msgType = msg.msgType;
-        var msgData = msg.msgData;
-        if (!msgType) {
-            logDebug("received peer message without msgType", msg);
-            return;
-        }
+    this.receivePeerDistribute = function (easyrtcid, msg, targeting) {
+      var msgType = msg.msgType;
+      var msgData = msg.msgData;
+      if (!msgType) {
+        logDebug("received peer message without msgType", msg);
+        return;
+      }
 
-        if (receivePeer.msgTypes[msgType]) {
-            if (receivePeer.msgTypes[msgType].sources[easyrtcid] &&
-                    receivePeer.msgTypes[msgType].sources[easyrtcid].cb) {
-                receivePeer.msgTypes[msgType].sources[easyrtcid].cb(easyrtcid, msgType, msgData, targeting);
-                return;
-            }
-            if (receivePeer.msgTypes[msgType].cb) {
-                receivePeer.msgTypes[msgType].cb(easyrtcid, msgType, msgData, targeting);
-                return;
-            }
+      if (receivePeer.msgTypes[msgType]) {
+        if (
+          receivePeer.msgTypes[msgType].sources[easyrtcid] &&
+          receivePeer.msgTypes[msgType].sources[easyrtcid].cb
+        ) {
+          receivePeer.msgTypes[msgType].sources[easyrtcid].cb(
+            easyrtcid,
+            msgType,
+            msgData,
+            targeting
+          );
+          return;
         }
-        if (receivePeer.cb) {
-            receivePeer.cb(easyrtcid, msgType, msgData, targeting);
+        if (receivePeer.msgTypes[msgType].cb) {
+          receivePeer.msgTypes[msgType].cb(
+            easyrtcid,
+            msgType,
+            msgData,
+            targeting
+          );
+          return;
         }
+      }
+      if (receivePeer.cb) {
+        receivePeer.cb(easyrtcid, msgType, msgData, targeting);
+      }
     };
 
     /**
@@ -2632,8 +2716,8 @@ var Easyrtc = function() {
      *         ("The Server sent the following message " + JSON.stringify(msgData));
      *     });
      */
-    this.setServerListener = function(listener) {
-        receiveServerCB = listener;
+    this.setServerListener = function (listener) {
+      receiveServerCB = listener;
     };
 
     /**
@@ -2649,12 +2733,12 @@ var Easyrtc = function() {
      * @example
      *     easyrtc.setSocketUrl(":8080", options);
      */
-    this.setSocketUrl = function(socketUrl, options) {
-        logDebug("WebRTC signaling server URL set to " + socketUrl);
-        serverPath = socketUrl;
-        if( options ) {
-            connectionOptions = options;
-        }
+    this.setSocketUrl = function (socketUrl, options) {
+      logDebug("WebRTC signaling server URL set to " + socketUrl);
+      serverPath = socketUrl;
+      if (options) {
+        connectionOptions = options;
+      }
     };
 
     /**
@@ -2667,19 +2751,23 @@ var Easyrtc = function() {
      *    }
      *
      */
-    this.setUsername = function(username) {
-        if( self.myEasyrtcid ) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "easyrtc.setUsername called after authentication");
-            return false;
-        }
-        else if (self.isNameValid(username)) {
-            self.username = username;
-            return true;
-        }
-        else {
-            self.showError(self.errCodes.BAD_NAME, self.format(self.getConstantString("badUserName"), username));
-            return false;
-        }
+    this.setUsername = function (username) {
+      if (self.myEasyrtcid) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "easyrtc.setUsername called after authentication"
+        );
+        return false;
+      } else if (self.isNameValid(username)) {
+        self.username = username;
+        return true;
+      } else {
+        self.showError(
+          self.errCodes.BAD_NAME,
+          self.format(self.getConstantString("badUserName"), username)
+        );
+        return false;
+      }
     };
 
     /**
@@ -2688,29 +2776,29 @@ var Easyrtc = function() {
      * @param {String} room - an optional room name argument limiting results to a particular room.
      * @returns {Array} an array of {easyrtcid:id, roomName: roomName}.
      */
-    this.usernameToIds = function(username, room) {
-        var results = [];
-        var id, roomName;
-        for (roomName in lastLoggedInList) {
-            if (!lastLoggedInList.hasOwnProperty(roomName)) {
-                continue;
-            }
-            if (room && roomName !== room) {
-                continue;
-            }
-            for (id in lastLoggedInList[roomName]) {
-                if (!lastLoggedInList[roomName].hasOwnProperty(id)) {
-                    continue;
-                }
-                if (lastLoggedInList[roomName][id].username === username) {
-                    results.push({
-                        easyrtcid: id,
-                        roomName: roomName
-                    });
-                }
-            }
+    this.usernameToIds = function (username, room) {
+      var results = [];
+      var id, roomName;
+      for (roomName in lastLoggedInList) {
+        if (!lastLoggedInList.hasOwnProperty(roomName)) {
+          continue;
         }
-        return results;
+        if (room && roomName !== room) {
+          continue;
+        }
+        for (id in lastLoggedInList[roomName]) {
+          if (!lastLoggedInList[roomName].hasOwnProperty(id)) {
+            continue;
+          }
+          if (lastLoggedInList[roomName][id].username === username) {
+            results.push({
+              easyrtcid: id,
+              roomName: roomName,
+            });
+          }
+        }
+      }
+      return results;
     };
 
     /**
@@ -2720,32 +2808,36 @@ var Easyrtc = function() {
      * @param {type} fieldName
      * @returns {Object}  Undefined if the attribute does not exist, its value otherwise.
      */
-    this.getRoomApiField = function(roomName, easyrtcid, fieldName) {
-        if (lastLoggedInList[roomName] &&
-                lastLoggedInList[roomName][easyrtcid] &&
-                lastLoggedInList[roomName][easyrtcid].apiField &&
-                lastLoggedInList[roomName][easyrtcid].apiField[fieldName]) {
-            return lastLoggedInList[roomName][easyrtcid].apiField[fieldName].fieldValue;
-        }
-        else {
-            return undefined;
-        }
+    this.getRoomApiField = function (roomName, easyrtcid, fieldName) {
+      if (
+        lastLoggedInList[roomName] &&
+        lastLoggedInList[roomName][easyrtcid] &&
+        lastLoggedInList[roomName][easyrtcid].apiField &&
+        lastLoggedInList[roomName][easyrtcid].apiField[fieldName]
+      ) {
+        return lastLoggedInList[roomName][easyrtcid].apiField[fieldName]
+          .fieldValue;
+      } else {
+        return undefined;
+      }
     };
 
     /**
      * Set the authentication credential if needed.
      * @param {Object} credentialParm - a JSONable object.
      */
-    this.setCredential = function(credentialParm) {
-        try {
-            JSON.stringify(credentialParm);
-            credential = credentialParm;
-            return true;
-        }
-        catch (oops) {
-            self.showError(self.errCodes.BAD_CREDENTIAL, "easyrtc.setCredential passed a non-JSON-able object");
-            throw "easyrtc.setCredential passed a non-JSON-able object";
-        }
+    this.setCredential = function (credentialParm) {
+      try {
+        JSON.stringify(credentialParm);
+        credential = credentialParm;
+        return true;
+      } catch (oops) {
+        self.showError(
+          self.errCodes.BAD_CREDENTIAL,
+          "easyrtc.setCredential passed a non-JSON-able object"
+        );
+        throw "easyrtc.setCredential passed a non-JSON-able object";
+      }
     };
 
     /**
@@ -2756,8 +2848,8 @@ var Easyrtc = function() {
      *        easyrtc.showError("SYSTEM-ERROR", "Lost our connection to the socket server");
      *    });
      */
-    this.setDisconnectListener = function(disconnectListener) {
-        self.disconnectListener = disconnectListener;
+    this.setDisconnectListener = function (disconnectListener) {
+      self.disconnectListener = disconnectListener;
     };
 
     /**
@@ -2769,19 +2861,19 @@ var Easyrtc = function() {
      * @example
      *    console.log(easyrtcid + " is actually " + easyrtc.idToName(easyrtcid));
      */
-    this.idToName = function(easyrtcid) {
-        var roomName;
-        for (roomName in lastLoggedInList) {
-            if (!lastLoggedInList.hasOwnProperty(roomName)) {
-                continue;
-            }
-            if (lastLoggedInList[roomName][easyrtcid]) {
-                if (lastLoggedInList[roomName][easyrtcid].username) {
-                    return lastLoggedInList[roomName][easyrtcid].username;
-                }
-            }
+    this.idToName = function (easyrtcid) {
+      var roomName;
+      for (roomName in lastLoggedInList) {
+        if (!lastLoggedInList.hasOwnProperty(roomName)) {
+          continue;
         }
-        return easyrtcid;
+        if (lastLoggedInList[roomName][easyrtcid]) {
+          if (lastLoggedInList[roomName][easyrtcid].username) {
+            return lastLoggedInList[roomName][easyrtcid].username;
+          }
+        }
+      }
+      return easyrtcid;
     };
 
     /* used in easyrtc.connect */
@@ -2799,16 +2891,16 @@ var Easyrtc = function() {
     /**
      * Sets the peer connection configuration that will be used in subsequent calls.
      */
-    this.setPeerConnectionConfig = function(value) {
-        pc_config_to_use = value;
+    this.setPeerConnectionConfig = function (value) {
+      pc_config_to_use = value;
     };
 
     /**
      * Determines whether fresh ice server configuration should be requested from the server for each peer connection.
      * @param {Boolean} value the default is false.
      */
-    this.setUseFreshIceEachPeerConnection = function(value) {
-        use_fresh_ice_each_peer = value;
+    this.setUseFreshIceEachPeerConnection = function (value) {
+      use_fresh_ice_each_peer = value;
     };
 
     /**
@@ -2816,8 +2908,8 @@ var Easyrtc = function() {
      * for people who want to try filtering ice server configuration on the client.
      * @return {Object} which has the form {iceServers:[ice_server_entry, ice_server_entry, ...]}
      */
-    this.getServerIce = function() {
-        return pc_ice_config;
+    this.getServerIce = function () {
+      return pc_ice_config;
     };
 
     /**
@@ -2838,72 +2930,74 @@ var Easyrtc = function() {
      *      ]});
      *      easyrtc.call(...);
      */
-    this.setIceUsedInCalls = function(ice) {
-        if (!ice.iceServers) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Bad ice configuration passed to easyrtc.setIceUsedInCalls");
-        }
-        else {
-            pc_ice_config_to_use = ice;
-        }
+    this.setIceUsedInCalls = function (ice) {
+      if (!ice.iceServers) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Bad ice configuration passed to easyrtc.setIceUsedInCalls"
+        );
+      } else {
+        pc_ice_config_to_use = ice;
+      }
     };
 
     /** @private */
     function getRemoteStreamByName(peerConn, otherUser, streamName) {
+      var keyToMatch = null;
+      var remoteStreams = peerConn.pc.getRemoteStreams();
 
-        var keyToMatch = null;
-        var remoteStreams = peerConn.pc.getRemoteStreams();
+      // No streamName lead to default
+      if (!streamName) {
+        streamName = "default";
+      }
 
-        // No streamName lead to default
-        if (!streamName) {
-            streamName = "default";
+      // default lead to first if available
+      if (streamName === "default") {
+        if (remoteStreams.length > 0) {
+          return remoteStreams[0];
+        } else {
+          return null;
+        }
+      }
+
+      // Get mediaIds from user roomData
+      for (var roomName in self.roomData) {
+        if (self.roomData.hasOwnProperty(roomName)) {
+          var mediaIds = self.getRoomApiField(roomName, otherUser, "mediaIds");
+          keyToMatch = mediaIds ? mediaIds[streamName] : null;
+          if (keyToMatch) {
+            break;
+          }
+        }
+      }
+
+      //
+      if (!keyToMatch) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "remote peer does not have media stream called " + streamName
+        );
+      }
+
+      //
+      for (var i = 0; i < remoteStreams.length; i++) {
+        var remoteId;
+        if (remoteStreams[i].id) {
+          remoteId = remoteStreams[i].id;
+        } else {
+          remoteId = "default";
         }
 
-        // default lead to first if available
-        if (streamName === "default") {
-            if (remoteStreams.length > 0) {
-                return remoteStreams[0];
-            }
-            else {
-                return null;
-            }
+        if (
+          !keyToMatch || // No match
+          remoteId === keyToMatch || // Full match
+          remoteId.indexOf(keyToMatch) === 0 // Partial match
+        ) {
+          return remoteStreams[i];
         }
+      }
 
-        // Get mediaIds from user roomData
-        for (var roomName in self.roomData) {
-            if (self.roomData.hasOwnProperty(roomName)) {
-                var mediaIds = self.getRoomApiField(roomName, otherUser, "mediaIds");
-                keyToMatch = mediaIds ? mediaIds[streamName] : null;
-                if (keyToMatch) {
-                    break;
-                }
-            }
-        }
-
-        //
-        if (!keyToMatch) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "remote peer does not have media stream called " + streamName);
-        }
-
-        //
-        for (var i = 0; i < remoteStreams.length; i++) {
-            var remoteId;
-            if (remoteStreams[i].id) {
-                remoteId = remoteStreams[i].id;
-            }  else {
-                remoteId = "default";
-            }
-
-            if (
-                !keyToMatch || // No match
-                    remoteId === keyToMatch || // Full match
-                        remoteId.indexOf(keyToMatch) === 0 // Partial match
-            ) {
-                return remoteStreams[i];
-            }
-
-        }
-
-        return null;
+      return null;
     }
 
     /**
@@ -2913,42 +3007,45 @@ var Easyrtc = function() {
      * @param {string} streamName
      */
     function _haveTracks(easyrtcid, checkAudio, streamName) {
-        var stream, peerConnObj;
-        if (!easyrtcid) {
-            stream = getLocalMediaStreamByName(streamName);
+      var stream, peerConnObj;
+      if (!easyrtcid) {
+        stream = getLocalMediaStreamByName(streamName);
+      } else {
+        peerConnObj = peerConns[easyrtcid];
+        if (!peerConnObj) {
+          self.showError(
+            self.errCodes.DEVELOPER_ERR,
+            "haveTracks called about a peer you don't have a connection to"
+          );
+          return false;
         }
-        else {
-            peerConnObj = peerConns[easyrtcid];
-            if (!peerConnObj) {
-                self.showError(self.errCodes.DEVELOPER_ERR, "haveTracks called about a peer you don't have a connection to");
-                return false;
-            }
-            stream = getRemoteStreamByName(peerConns[easyrtcid], easyrtcid, streamName);
+        stream = getRemoteStreamByName(
+          peerConns[easyrtcid],
+          easyrtcid,
+          streamName
+        );
+      }
+      if (!stream) {
+        return false;
+      }
+
+      var tracks;
+      try {
+        if (checkAudio) {
+          tracks = stream.getAudioTracks();
+        } else {
+          tracks = stream.getVideoTracks();
         }
-        if (!stream) {
-            return false;
-        }
+      } catch (oops) {
+        // TODO why do we return true here ?
+        return true;
+      }
 
-        var tracks;
-        try {
+      if (!tracks) {
+        return false;
+      }
 
-            if (checkAudio) {
-                tracks = stream.getAudioTracks();
-            }
-            else {
-                tracks = stream.getVideoTracks();
-            }
-
-        } catch (oops) {
-            // TODO why do we return true here ?
-            return true;
-        }
-
-        if (!tracks) {
-            return false;
-        }
-
-        return tracks.length > 0;
+      return tracks.length > 0;
     }
 
     /** Determines if a particular peer2peer connection has an audio track.
@@ -2956,8 +3053,8 @@ var Easyrtc = function() {
      * @param {String} streamName - an optional stream id.
      * @return {Boolean} true if there is an audio track or the browser can't tell us.
      */
-    this.haveAudioTrack = function(easyrtcid, streamName) {
-        return _haveTracks(easyrtcid, true, streamName);
+    this.haveAudioTrack = function (easyrtcid, streamName) {
+      return _haveTracks(easyrtcid, true, streamName);
     };
 
     /** Determines if a particular peer2peer connection has a video track.
@@ -2965,8 +3062,8 @@ var Easyrtc = function() {
      * @param {String} streamName - an optional stream id.     *
      * @return {Boolean} true if there is an video track or the browser can't tell us.
      */
-    this.haveVideoTrack = function(easyrtcid, streamName) {
-        return _haveTracks(easyrtcid, false, streamName);
+    this.haveVideoTrack = function (easyrtcid, streamName) {
+      return _haveTracks(easyrtcid, false, streamName);
     };
 
     /**
@@ -2975,9 +3072,11 @@ var Easyrtc = function() {
      * @param {String} fieldName - the name of the field.
      * @return {Object} dataValue - the value of the field if present, undefined if not present.
      */
-    this.getRoomField = function(roomName, fieldName) {
-        var fields = self.getRoomFields(roomName);
-        return (!fields || !fields[fieldName]) ? undefined : fields[fieldName].fieldValue;
+    this.getRoomField = function (roomName, fieldName) {
+      var fields = self.getRoomFields(roomName);
+      return !fields || !fields[fieldName]
+        ? undefined
+        : fields[fieldName].fieldValue;
     };
 
     /** @private */
@@ -2993,47 +3092,46 @@ var Easyrtc = function() {
     // easyrtc.disconnect performs a clean disconnection of the client from the server.
     //
     function disconnectBody() {
-        var roomName;
-        self.loggingOut = true;
-        offersPending = {};
-        acceptancePending = {};
-        self.disconnecting = true;
-        closedChannel = self.webSocket;
+      var roomName;
+      self.loggingOut = true;
+      offersPending = {};
+      acceptancePending = {};
+      self.disconnecting = true;
+      closedChannel = self.webSocket;
 
-        if (stillAliveTimer) {
-           clearTimeout(stillAliveTimer);
-           stillAliveTimer = null;
+      if (stillAliveTimer) {
+        clearTimeout(stillAliveTimer);
+        stillAliveTimer = null;
+      }
+
+      if (self.webSocketConnected) {
+        if (!preallocatedSocketIo) {
+          self.webSocket.close();
         }
+        self.webSocketConnected = false;
+      }
+      self.hangupAll();
+      if (roomOccupantListener) {
+        for (roomName in lastLoggedInList) {
+          if (lastLoggedInList.hasOwnProperty(roomName)) {
+            // Notify roomOccupantListener
+            roomOccupantListener(roomName, {}, false);
 
-        if (self.webSocketConnected) {
-            if (!preallocatedSocketIo) {
-                self.webSocket.close();
-            }
-            self.webSocketConnected = false;
+            // Clear roomApiFields and roomApiFieldTimer
+            self.setRoomApiField(roomName);
+          }
         }
-        self.hangupAll();
-        if (roomOccupantListener) {
-            for (roomName in lastLoggedInList) {
-                if (lastLoggedInList.hasOwnProperty(roomName)) {
+      }
 
-                    // Notify roomOccupantListener
-                    roomOccupantListener(roomName, {}, false);
+      lastLoggedInList = {};
+      self.emitEvent("roomOccupant", {});
 
-                    // Clear roomApiFields and roomApiFieldTimer
-                    self.setRoomApiField(roomName);
-                }
-            }
-        }
-
-        lastLoggedInList = {};
-        self.emitEvent("roomOccupant", {});
-
-        self.roomData = {};
-        self.roomJoin = {};
-        self.loggingOut = false;
-        self.myEasyrtcid = null;
-        self.disconnecting = false;
-        oldConfig = {};
+      self.roomData = {};
+      self.roomJoin = {};
+      self.loggingOut = false;
+      self.myEasyrtcid = null;
+      self.disconnecting = false;
+      oldConfig = {};
     }
 
     /**
@@ -3041,38 +3139,37 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.disconnect();
      */
-    this.disconnect = function() {
+    this.disconnect = function () {
+      logDebug("attempt to disconnect from WebRTC signalling server");
 
-        logDebug("attempt to disconnect from WebRTC signalling server");
+      self.disconnecting = true;
+      self.hangupAll();
+      self.loggingOut = true;
+      //
+      // The hangupAll may try to send configuration information back to the server.
+      // Collecting that information is asynchronous, we don't actually close the
+      // connection until it's had a chance to be sent. We allocate 100ms for collecting
+      // the info, so 250ms should be sufficient for the disconnecting.
+      //
+      setTimeout(function () {
+        if (self.webSocket) {
+          try {
+            self.webSocket.disconnect();
+          } catch (e) {
+            // we don't really care if this fails.
+          }
 
-        self.disconnecting = true;
-        self.hangupAll();
-        self.loggingOut = true;
-        //
-        // The hangupAll may try to send configuration information back to the server.
-        // Collecting that information is asynchronous, we don't actually close the
-        // connection until it's had a chance to be sent. We allocate 100ms for collecting
-        // the info, so 250ms should be sufficient for the disconnecting.
-        //
-        setTimeout(function() {
-            if (self.webSocket) {
-                try {
-                    self.webSocket.disconnect();
-                } catch (e) {
-                    // we don't really care if this fails.
-                }
-
-                closedChannel = self.webSocket;
-                self.webSocket = 0;
-            }
-            self.loggingOut = false;
-            self.disconnecting = false;
-            if (roomOccupantListener) {
-                roomOccupantListener(null, {}, false);
-            }
-            self.emitEvent("roomOccupant", {});
-            oldConfig = {};
-        }, 250);
+          closedChannel = self.webSocket;
+          self.webSocket = 0;
+        }
+        self.loggingOut = false;
+        self.disconnecting = false;
+        if (roomOccupantListener) {
+          roomOccupantListener(null, {}, false);
+        }
+        self.emitEvent("roomOccupant", {});
+        oldConfig = {};
+      }, 250);
     };
 
     /** @private */
@@ -3084,46 +3181,50 @@ var Easyrtc = function() {
     //   successCallback: a function with the signature  function(msgType, wholeMsg);
     //   errorCallback: a function with signature function(errorCode, errorText)
     //
-    function sendSignalling(destUser, msgType, msgData, successCallback, errorCallback) {
-        if (!self.webSocket) {
-            logDebug("websocket failed because no connection to server");
+    function sendSignalling(
+      destUser,
+      msgType,
+      msgData,
+      successCallback,
+      errorCallback
+    ) {
+      if (!self.webSocket) {
+        logDebug("websocket failed because no connection to server");
 
-            throw "Attempt to send message without a valid connection to the server.";
+        throw "Attempt to send message without a valid connection to the server.";
+      } else {
+        var dataToShip = {
+          msgType: msgType,
+        };
+        if (destUser) {
+          dataToShip.targetEasyrtcid = destUser;
         }
-        else {
-            var dataToShip = {
-                msgType: msgType
-            };
-            if (destUser) {
-                dataToShip.targetEasyrtcid = destUser;
-            }
-            if (msgData) {
-                dataToShip.msgData = msgData;
-            }
-
-            logDebug("sending socket message " + JSON.stringify(dataToShip));
-
-            self.webSocket.json.emit("easyrtcCmd", dataToShip,
-                    function(ackMsg) {
-                        if (ackMsg.msgType !== "error") {
-                            if (!ackMsg.hasOwnProperty("msgData")) {
-                                ackMsg.msgData = null;
-                            }
-                            if (successCallback) {
-                                successCallback(ackMsg.msgType, ackMsg.msgData);
-                            }
-                        }
-                        else {
-                            if (errorCallback) {
-                                errorCallback(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
-                            }
-                            else {
-                                self.showError(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
-                            }
-                        }
-                    }
-            );
+        if (msgData) {
+          dataToShip.msgData = msgData;
         }
+
+        logDebug("sending socket message " + JSON.stringify(dataToShip));
+
+        self.webSocket.emit("easyrtcCmd", dataToShip, function (ackMsg) {
+          if (ackMsg.msgType !== "error") {
+            if (!ackMsg.hasOwnProperty("msgData")) {
+              ackMsg.msgData = null;
+            }
+            if (successCallback) {
+              successCallback(ackMsg.msgType, ackMsg.msgData);
+            }
+          } else {
+            if (errorCallback) {
+              errorCallback(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
+            } else {
+              self.showError(
+                ackMsg.msgData.errorCode,
+                ackMsg.msgData.errorText
+              );
+            }
+          }
+        });
+      }
     }
 
     /** @private */
@@ -3135,33 +3236,37 @@ var Easyrtc = function() {
     var sendByChunkUidCounter = 0;
     /** @private */
     function sendByChunkHelper(destUser, msgData) {
-        var transferId = destUser + '-' + sendByChunkUidCounter++;
+      var transferId = destUser + "-" + sendByChunkUidCounter++;
 
-        var pos, len, startMessage, message, endMessage;
-        var numberOfChunks = Math.ceil(msgData.length / self.maxP2PMessageLength);
-        startMessage = {
-            transfer: 'start',
-            transferId: transferId,
-            parts: numberOfChunks
+      var pos, len, startMessage, message, endMessage;
+      var numberOfChunks = Math.ceil(msgData.length / self.maxP2PMessageLength);
+      startMessage = {
+        transfer: "start",
+        transferId: transferId,
+        parts: numberOfChunks,
+      };
+
+      endMessage = {
+        transfer: "end",
+        transferId: transferId,
+      };
+
+      peerConns[destUser].dataChannelS.send(JSON.stringify(startMessage));
+
+      for (
+        pos = 0, len = msgData.length;
+        pos < len;
+        pos += self.maxP2PMessageLength
+      ) {
+        message = {
+          transferId: transferId,
+          data: msgData.substr(pos, self.maxP2PMessageLength),
+          transfer: "chunk",
         };
+        peerConns[destUser].dataChannelS.send(JSON.stringify(message));
+      }
 
-        endMessage = {
-            transfer: 'end',
-            transferId: transferId
-        };
-
-        peerConns[destUser].dataChannelS.send(JSON.stringify(startMessage));
-
-        for (pos = 0, len = msgData.length; pos < len; pos += self.maxP2PMessageLength) {
-            message = {
-                transferId: transferId,
-                data: msgData.substr(pos, self.maxP2PMessageLength),
-                transfer: 'chunk'
-            };
-            peerConns[destUser].dataChannelS.send(JSON.stringify(message));
-        }
-
-        peerConns[destUser].dataChannelS.send(JSON.stringify(endMessage));
+      peerConns[destUser].dataChannelS.send(JSON.stringify(endMessage));
     }
 
     /**
@@ -3175,32 +3280,51 @@ var Easyrtc = function() {
      * @example
      *     easyrtc.sendDataP2P(someEasyrtcid, "roomData", {room:499, bldgNum:'asd'});
      */
-    this.sendDataP2P = function(destUser, msgType, msgData) {
+    this.sendDataP2P = function (destUser, msgType, msgData) {
+      var flattenedData = JSON.stringify({
+        msgType: msgType,
+        msgData: msgData,
+      });
+      logDebug(
+        "sending p2p message to " +
+          destUser +
+          " with data=" +
+          JSON.stringify(flattenedData)
+      );
 
-        var flattenedData = JSON.stringify({msgType: msgType, msgData: msgData});
-        logDebug("sending p2p message to " + destUser + " with data=" + JSON.stringify(flattenedData));
-
-        if (!peerConns[destUser]) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Attempt to send data peer to peer without a connection to " + destUser + ' first.');
+      if (!peerConns[destUser]) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to send data peer to peer without a connection to " +
+            destUser +
+            " first."
+        );
+      } else if (!peerConns[destUser].dataChannelS) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to send data peer to peer without establishing a data channel to " +
+            destUser +
+            " first."
+        );
+      } else if (!peerConns[destUser].dataChannelReady) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to use data channel to " +
+            destUser +
+            " before it's ready to send."
+        );
+      } else {
+        try {
+          if (flattenedData.length > self.maxP2PMessageLength) {
+            sendByChunkHelper(destUser, flattenedData);
+          } else {
+            peerConns[destUser].dataChannelS.send(flattenedData);
+          }
+        } catch (sendDataErr) {
+          logDebug("sendDataP2P error: ", sendDataErr);
+          throw sendDataErr;
         }
-        else if (!peerConns[destUser].dataChannelS) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Attempt to send data peer to peer without establishing a data channel to " + destUser + ' first.');
-        }
-        else if (!peerConns[destUser].dataChannelReady) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Attempt to use data channel to " + destUser + " before it's ready to send.");
-        }
-        else {
-            try {
-                if (flattenedData.length > self.maxP2PMessageLength) {
-                    sendByChunkHelper(destUser, flattenedData);
-                } else {
-                    peerConns[destUser].dataChannelS.send(flattenedData);
-                }
-            } catch (sendDataErr) {
-                logDebug("sendDataP2P error: ", sendDataErr);
-                throw sendDataErr;
-            }
-        }
+      }
     };
 
     /** Sends data to another user using websockets. The easyrtc.sendServerMessage or easyrtc.sendPeerMessage methods
@@ -3220,47 +3344,50 @@ var Easyrtc = function() {
      *      }
      *    );
      */
-    this.sendDataWS = function(destination, msgType, msgData, ackhandler) {
-        logDebug("sending client message via websockets to " + destination + " with data=" + JSON.stringify(msgData));
+    this.sendDataWS = function (destination, msgType, msgData, ackhandler) {
+      logDebug(
+        "sending client message via websockets to " +
+          destination +
+          " with data=" +
+          JSON.stringify(msgData)
+      );
 
-        if (!ackhandler) {
-            ackhandler = function(msg) {
-                if (msg.msgType === "error") {
-                    self.showError(msg.msgData.errorCode, msg.msgData.errorText);
-                }
-            };
-        }
-
-        var outgoingMessage = {
-            msgType: msgType,
-            msgData: msgData
+      if (!ackhandler) {
+        ackhandler = function (msg) {
+          if (msg.msgType === "error") {
+            self.showError(msg.msgData.errorCode, msg.msgData.errorText);
+          }
         };
+      }
 
-        if (destination) {
-            if (typeof destination === 'string') {
-                outgoingMessage.targetEasyrtcid = destination;
-            }
-            else if (typeof destination === 'object') {
-                if (destination.targetEasyrtcid) {
-                    outgoingMessage.targetEasyrtcid = destination.targetEasyrtcid;
-                }
-                if (destination.targetRoom) {
-                    outgoingMessage.targetRoom = destination.targetRoom;
-                }
-                if (destination.targetGroup) {
-                    outgoingMessage.targetGroup = destination.targetGroup;
-                }
-            }
-        }
+      var outgoingMessage = {
+        msgType: msgType,
+        msgData: msgData,
+      };
 
-        if (self.webSocket) {
-            self.webSocket.json.emit("easyrtcMsg", outgoingMessage, ackhandler);
+      if (destination) {
+        if (typeof destination === "string") {
+          outgoingMessage.targetEasyrtcid = destination;
+        } else if (typeof destination === "object") {
+          if (destination.targetEasyrtcid) {
+            outgoingMessage.targetEasyrtcid = destination.targetEasyrtcid;
+          }
+          if (destination.targetRoom) {
+            outgoingMessage.targetRoom = destination.targetRoom;
+          }
+          if (destination.targetGroup) {
+            outgoingMessage.targetGroup = destination.targetGroup;
+          }
         }
-        else {
-            logDebug("websocket failed because no connection to server");
+      }
 
-            throw "Attempt to send message without a valid connection to the server.";
-        }
+      if (self.webSocket) {
+        self.webSocket.emit("easyrtcMsg", outgoingMessage, ackhandler);
+      } else {
+        logDebug("websocket failed because no connection to server");
+
+        throw "Attempt to send message without a valid connection to the server.";
+      }
     };
 
     /** Sends data to another user. This method uses data channels if one has been set up, or websockets otherwise.
@@ -3275,13 +3402,12 @@ var Easyrtc = function() {
      *       function ackHandler(msgType, msgData);
      *    );
      */
-    this.sendData = function(destUser, msgType, msgData, ackHandler) {
-        if (peerConns[destUser] && peerConns[destUser].dataChannelReady) {
-            self.sendDataP2P(destUser, msgType, msgData);
-        }
-        else {
-            self.sendDataWS(destUser, msgType, msgData, ackHandler);
-        }
+    this.sendData = function (destUser, msgType, msgData, ackHandler) {
+      if (peerConns[destUser] && peerConns[destUser].dataChannelReady) {
+        self.sendDataP2P(destUser, msgType, msgData);
+      } else {
+        self.sendDataWS(destUser, msgType, msgData, ackHandler);
+      }
     };
 
     /**
@@ -3301,28 +3427,39 @@ var Easyrtc = function() {
      *                console.log("error was " + errorText);
      *             });
      */
-    this.sendPeerMessage = function(destination, msgType, msgData, successCB, failureCB) {
-        if (!destination) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "destination was null in sendPeerMessage");
+    this.sendPeerMessage = function (
+      destination,
+      msgType,
+      msgData,
+      successCB,
+      failureCB
+    ) {
+      if (!destination) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "destination was null in sendPeerMessage"
+        );
+      }
+
+      logDebug("sending peer message " + JSON.stringify(msgData));
+
+      function ackHandler(response) {
+        if (response.msgType === "error") {
+          if (failureCB) {
+            failureCB(response.msgData.errorCode, response.msgData.errorText);
+          }
+        } else {
+          if (successCB) {
+            // firefox complains if you pass an undefined as an parameter.
+            successCB(
+              response.msgType,
+              response.msgData ? response.msgData : null
+            );
+          }
         }
+      }
 
-        logDebug("sending peer message " + JSON.stringify(msgData));
-
-        function ackHandler(response) {
-            if (response.msgType === "error") {
-                if (failureCB) {
-                    failureCB(response.msgData.errorCode, response.msgData.errorText);
-                }
-            }
-            else {
-                if (successCB) {
-                    // firefox complains if you pass an undefined as an parameter.
-                    successCB(response.msgType, response.msgData ? response.msgData : null);
-                }
-            }
-        }
-
-        self.sendDataWS(destination, msgType, msgData, ackHandler);
+      self.sendDataWS(destination, msgType, msgData, ackHandler);
     };
 
     /**
@@ -3340,25 +3477,26 @@ var Easyrtc = function() {
      *                console.log("error was " + errorText);
      *             });
      */
-    this.sendServerMessage = function(msgType, msgData, successCB, failureCB) {
+    this.sendServerMessage = function (msgType, msgData, successCB, failureCB) {
+      var dataToShip = { msgType: msgType, msgData: msgData };
+      logDebug("sending server message " + JSON.stringify(dataToShip));
 
-        var dataToShip = {msgType: msgType, msgData: msgData};
-        logDebug("sending server message " + JSON.stringify(dataToShip));
-
-        function ackhandler(response) {
-            if (response.msgType === "error") {
-                if (failureCB) {
-                    failureCB(response.msgData.errorCode, response.msgData.errorText);
-                }
-            }
-            else {
-                if (successCB) {
-                    successCB(response.msgType, response.msgData ? response.msgData : null);
-                }
-            }
+      function ackhandler(response) {
+        if (response.msgType === "error") {
+          if (failureCB) {
+            failureCB(response.msgData.errorCode, response.msgData.errorText);
+          }
+        } else {
+          if (successCB) {
+            successCB(
+              response.msgType,
+              response.msgData ? response.msgData : null
+            );
+          }
         }
+      }
 
-        self.sendDataWS(null, msgType, msgData, ackhandler);
+      self.sendDataWS(null, msgType, msgData, ackhandler);
     };
 
     /** Sends the server a request for the list of rooms the user can see.
@@ -3378,20 +3516,22 @@ var Easyrtc = function() {
      *         }
      *    );
      */
-    this.getRoomList = function(callback, errorCallback) {
-        sendSignalling(null, "getRoomList", null,
-                function(msgType, msgData) {
-                    callback(msgData.roomList);
-                },
-                function(errorCode, errorText) {
-                    if (errorCallback) {
-                        errorCallback(errorCode, errorText);
-                    }
-                    else {
-                        self.showError(errorCode, errorText);
-                    }
-                }
-        );
+    this.getRoomList = function (callback, errorCallback) {
+      sendSignalling(
+        null,
+        "getRoomList",
+        null,
+        function (msgType, msgData) {
+          callback(msgData.roomList);
+        },
+        function (errorCode, errorText) {
+          if (errorCallback) {
+            errorCallback(errorCode, errorText);
+          } else {
+            self.showError(errorCode, errorText);
+          }
+        }
+      );
     };
 
     /** Value returned by easyrtc.getConnectStatus if the other user isn't connected to us. */
@@ -3415,43 +3555,41 @@ var Easyrtc = function() {
      *                  function(){ console.log("failure"); });
      *     }
      */
-    this.getConnectStatus = function(otherUser) {
-        if (!peerConns.hasOwnProperty(otherUser)) {
-            return self.NOT_CONNECTED;
-        }
-        var peer = peerConns[otherUser];
-        if ((peer.sharingAudio || peer.sharingVideo) && !peer.startedAV) {
-            return self.BECOMING_CONNECTED;
-        }
-        else if (peer.sharingData && !peer.dataChannelReady) {
-            return self.BECOMING_CONNECTED;
-        }
-        else {
-            return self.IS_CONNECTED;
-        }
+    this.getConnectStatus = function (otherUser) {
+      if (!peerConns.hasOwnProperty(otherUser)) {
+        return self.NOT_CONNECTED;
+      }
+      var peer = peerConns[otherUser];
+      if ((peer.sharingAudio || peer.sharingVideo) && !peer.startedAV) {
+        return self.BECOMING_CONNECTED;
+      } else if (peer.sharingData && !peer.dataChannelReady) {
+        return self.BECOMING_CONNECTED;
+      } else {
+        return self.IS_CONNECTED;
+      }
     };
 
     /**
      * @private
      */
     function buildPeerConstraints() {
-        var options = [];
-        options.push({'DtlsSrtpKeyAgreement': 'true'}); // for interoperability
-        return {optional: options};
+      var options = [];
+      options.push({ DtlsSrtpKeyAgreement: "true" }); // for interoperability
+      return { optional: options };
     }
 
     /** @private */
     function sendQueuedCandidates(peer, onSignalSuccess, onSignalFailure) {
-        var i;
-        for (i = 0; i < peerConns[peer].candidatesToSend.length; i++) {
-            sendSignalling(
-                    peer,
-                    "candidate",
-                    peerConns[peer].candidatesToSend[i],
-                    onSignalSuccess,
-                    onSignalFailure
-                    );
-        }
+      var i;
+      for (i = 0; i < peerConns[peer].candidatesToSend.length; i++) {
+        sendSignalling(
+          peer,
+          "candidate",
+          peerConns[peer].candidatesToSend[i],
+          onSignalSuccess,
+          onSignalFailure
+        );
+      }
     }
 
     /** @private */
@@ -3460,95 +3598,92 @@ var Easyrtc = function() {
     // and the name of the stream.
     //
     function emitOnStreamClosed(easyrtcid, stream) {
+      if (!peerConns[easyrtcid]) {
+        return;
+      }
 
-        if (!peerConns[easyrtcid]) {
-            return;
+      var streamId = stream.id || "default",
+        streamName = getNameOfRemoteStream(easyrtcid, streamId) || "default";
+
+      if (peerConns[easyrtcid].liveRemoteStreams[streamName]) {
+        delete peerConns[easyrtcid].liveRemoteStreams[streamName];
+        if (self.onStreamClosed) {
+          self.onStreamClosed(easyrtcid, stream, streamName);
         }
-
-        var streamId = stream.id || "default",
-            streamName = getNameOfRemoteStream(easyrtcid, streamId) || "default";
-
-        if (peerConns[easyrtcid].liveRemoteStreams[streamName]) {
-            delete peerConns[easyrtcid].liveRemoteStreams[streamName];
-            if (self.onStreamClosed) {
-                self.onStreamClosed(easyrtcid, stream, streamName);
-            }
-        }
-        delete peerConns[easyrtcid].remoteStreamIdToName[streamId];
+      }
+      delete peerConns[easyrtcid].remoteStreamIdToName[streamId];
     }
 
     /** @private */
     function onRemoveStreamHelper(easyrtcid, stream) {
-        if (peerConns[easyrtcid]) {
-            emitOnStreamClosed(easyrtcid, stream);
-            updateConfigurationInfo();
-            if (peerConns[easyrtcid].pc) {
-                 try {
-                    peerConns[easyrtcid].pc.removeStream(stream);
-                 } catch( err) {}
-            }
+      if (peerConns[easyrtcid]) {
+        emitOnStreamClosed(easyrtcid, stream);
+        updateConfigurationInfo();
+        if (peerConns[easyrtcid].pc) {
+          try {
+            peerConns[easyrtcid].pc.removeStream(stream);
+          } catch (err) {}
         }
+      }
     }
 
     /** @private */
     function buildDeltaRecord(added, deleted) {
-        function objectNotEmpty(obj) {
-            var i;
-            for (i in obj) {
-                if (obj.hasOwnProperty(i)) {
-                    return true;
-                }
-            }
-            return false;
+      function objectNotEmpty(obj) {
+        var i;
+        for (i in obj) {
+          if (obj.hasOwnProperty(i)) {
+            return true;
+          }
         }
+        return false;
+      }
 
-        var result = {};
-        if (objectNotEmpty(added)) {
-            result.added = added;
-        }
+      var result = {};
+      if (objectNotEmpty(added)) {
+        result.added = added;
+      }
 
-        if (objectNotEmpty(deleted)) {
-            result.deleted = deleted;
-        }
+      if (objectNotEmpty(deleted)) {
+        result.deleted = deleted;
+      }
 
-        if (objectNotEmpty(result)) {
-            return result;
-        }
-        else {
-            return null;
-        }
+      if (objectNotEmpty(result)) {
+        return result;
+      } else {
+        return null;
+      }
     }
 
     /** @private */
     function findDeltas(oldVersion, newVersion) {
-        var i;
-        var added = {}, deleted = {};
-        var subPart;
-        for (i in newVersion) {
-            if (newVersion.hasOwnProperty(i)) {
-                if (oldVersion === null || typeof oldVersion[i] === 'undefined') {
-                    added[i] = newVersion[i];
-                }
-                else if (typeof newVersion[i] === 'object') {
-                    subPart = findDeltas(oldVersion[i], newVersion[i]);
-                    if (subPart !== null) {
-                        added[i] = newVersion[i];
-                    }
-                }
-                else if (newVersion[i] !== oldVersion[i]) {
-                    added[i] = newVersion[i];
-                }
+      var i;
+      var added = {},
+        deleted = {};
+      var subPart;
+      for (i in newVersion) {
+        if (newVersion.hasOwnProperty(i)) {
+          if (oldVersion === null || typeof oldVersion[i] === "undefined") {
+            added[i] = newVersion[i];
+          } else if (typeof newVersion[i] === "object") {
+            subPart = findDeltas(oldVersion[i], newVersion[i]);
+            if (subPart !== null) {
+              added[i] = newVersion[i];
             }
+          } else if (newVersion[i] !== oldVersion[i]) {
+            added[i] = newVersion[i];
+          }
         }
-        for (i in oldVersion) {
-            if (newVersion.hasOwnProperty(i)) {
-                if (typeof newVersion[i] === 'undefined') {
-                    deleted[i] = oldVersion[i];
-                }
-            }
+      }
+      for (i in oldVersion) {
+        if (newVersion.hasOwnProperty(i)) {
+          if (typeof newVersion[i] === "undefined") {
+            deleted[i] = oldVersion[i];
+          }
         }
+      }
 
-        return buildDeltaRecord(added, deleted);
+      return buildDeltaRecord(added, deleted);
     }
 
     /** @private */
@@ -3558,841 +3693,954 @@ var Easyrtc = function() {
     // do the actual sending.
     //
     function collectConfigurationInfo(/* forAuthentication */) {
-        var p2pList = {};
-        var i;
-        for (i in peerConns) {
-            if (!peerConns.hasOwnProperty(i)) {
-                continue;
-            }
-            p2pList[i] = {
-                connectTime: peerConns[i].connectTime,
-                isInitiator: !!peerConns[i].isInitiator
-            };
+      var p2pList = {};
+      var i;
+      for (i in peerConns) {
+        if (!peerConns.hasOwnProperty(i)) {
+          continue;
         }
-
-        var newConfig = {
-            userSettings: {
-                sharingAudio: !!haveAudioVideo.audio,
-                sharingVideo: !!haveAudioVideo.video,
-                sharingData: !!dataEnabled,
-                nativeVideoWidth: self.nativeVideoWidth,
-                nativeVideoHeight: self.nativeVideoHeight,
-                windowWidth: window.innerWidth,
-                windowHeight: window.innerHeight,
-                screenWidth: window.screen.width,
-                screenHeight: window.screen.height,
-                cookieEnabled: navigator.cookieEnabled,
-                os: navigator.oscpu,
-                language: navigator.language
-            }
+        p2pList[i] = {
+          connectTime: peerConns[i].connectTime,
+          isInitiator: !!peerConns[i].isInitiator,
         };
+      }
 
-        if (!isEmptyObj(p2pList)) {
-            newConfig.p2pList = p2pList;
-        }
+      var newConfig = {
+        userSettings: {
+          sharingAudio: !!haveAudioVideo.audio,
+          sharingVideo: !!haveAudioVideo.video,
+          sharingData: !!dataEnabled,
+          nativeVideoWidth: self.nativeVideoWidth,
+          nativeVideoHeight: self.nativeVideoHeight,
+          windowWidth: window.innerWidth,
+          windowHeight: window.innerHeight,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+          cookieEnabled: navigator.cookieEnabled,
+          os: navigator.oscpu,
+          language: navigator.language,
+        },
+      };
 
-        return newConfig;
+      if (!isEmptyObj(p2pList)) {
+        newConfig.p2pList = p2pList;
+      }
+
+      return newConfig;
     }
 
     /** @private */
     function updateConfiguration() {
-
-        var newConfig = collectConfigurationInfo(false);
+      var newConfig = collectConfigurationInfo(false);
+      //
+      // we need to give the getStats calls a chance to fish out the data.
+      // The longest I've seen it take is 5 milliseconds so 100 should be overkill.
+      //
+      var sendDeltas = function () {
+        var alteredData = findDeltas(oldConfig, newConfig);
         //
-        // we need to give the getStats calls a chance to fish out the data.
-        // The longest I've seen it take is 5 milliseconds so 100 should be overkill.
+        // send all the configuration information that changes during the session
         //
-        var sendDeltas = function() {
-            var alteredData = findDeltas(oldConfig, newConfig);
-            //
-            // send all the configuration information that changes during the session
-            //
-            if (alteredData) {
-                logDebug("cfg=" + JSON.stringify(alteredData.added));
+        if (alteredData) {
+          logDebug("cfg=" + JSON.stringify(alteredData.added));
 
-                if (self.webSocket) {
-                    sendSignalling(null, "setUserCfg", {setUserCfg: alteredData.added}, null, null);
-                }
-            }
-            oldConfig = newConfig;
-        };
-        if (oldConfig === {}) {
-            sendDeltas();
+          if (self.webSocket) {
+            sendSignalling(
+              null,
+              "setUserCfg",
+              { setUserCfg: alteredData.added },
+              null,
+              null
+            );
+          }
         }
-        else {
-            setTimeout(sendDeltas, 100);
-        }
+        oldConfig = newConfig;
+      };
+      if (oldConfig === {}) {
+        sendDeltas();
+      } else {
+        setTimeout(sendDeltas, 100);
+      }
     }
 
     // Parse the uint32 PRIORITY field into its constituent parts from RFC 5245,
     // type preference, local preference, and (256 - component ID).
     // ex: 126 | 32252 | 255 (126 is host preference, 255 is component ID 1)
     function formatPriority(priority) {
-        var s = '';
-        s += (priority >> 24);
-        s += ' | ';
-        s += (priority >> 8) & 0xFFFF;
-        s += ' | ';
-        s += priority & 0xFF;
-        return s;
+      var s = "";
+      s += priority >> 24;
+      s += " | ";
+      s += (priority >> 8) & 0xffff;
+      s += " | ";
+      s += priority & 0xff;
+      return s;
     }
 
     // Parse a candidate:foo string into an object, for easier use by other methods.
     /** @private */
     function parseCandidate(text) {
-        var candidateStr = 'candidate:';
-        var pos = text.indexOf(candidateStr) + candidateStr.length;
-        var fields = text.substr(pos).split(' ');
-        return {
-            'component': fields[1],
-            'type': fields[7],
-            'foundation': fields[0],
-            'protocol': fields[2],
-            'address': fields[4],
-            'port': fields[5],
-            'priority': formatPriority(fields[3])
-        };
+      var candidateStr = "candidate:";
+      var pos = text.indexOf(candidateStr) + candidateStr.length;
+      var fields = text.substr(pos).split(" ");
+      return {
+        component: fields[1],
+        type: fields[7],
+        foundation: fields[0],
+        protocol: fields[2],
+        address: fields[4],
+        port: fields[5],
+        priority: formatPriority(fields[3]),
+      };
     }
 
     /** @private */
     function processCandidate(candidate) {
-        self._candidates = self._candidates || [];
-        self._candidates.push(parseCandidate(candidate));
+      self._candidates = self._candidates || [];
+      self._candidates.push(parseCandidate(candidate));
     }
 
     function processAddedStream(otherUser, peerStream) {
+      if (!peerConns[otherUser] || peerConns[otherUser].cancelled) {
+        return;
+      }
 
-        if (!peerConns[otherUser] ||  peerConns[otherUser].cancelled) {
-            return;
+      var peerConn = peerConns[otherUser];
+
+      if (!peerConn.startedAV) {
+        peerConn.startedAV = true;
+        peerConn.sharingAudio = haveAudioVideo.audio;
+        peerConn.sharingVideo = haveAudioVideo.video;
+        peerConn.connectTime = new Date().getTime();
+        if (peerConn.callSuccessCB) {
+          if (peerConn.sharingAudio || peerConn.sharingVideo) {
+            peerConn.callSuccessCB(otherUser, "audiovideo");
+          }
         }
-
-        var peerConn = peerConns[otherUser];
-
-        if (!peerConn.startedAV) {
-            peerConn.startedAV = true;
-            peerConn.sharingAudio = haveAudioVideo.audio;
-            peerConn.sharingVideo = haveAudioVideo.video;
-            peerConn.connectTime = new Date().getTime();
-            if (peerConn.callSuccessCB) {
-                if (peerConn.sharingAudio || peerConn.sharingVideo) {
-                    peerConn.callSuccessCB(otherUser, "audiovideo");
-                }
-            }
-            if (self.audioEnabled || self.videoEnabled) {
-                updateConfiguration();
-            }
+        if (self.audioEnabled || self.videoEnabled) {
+          updateConfiguration();
         }
+      }
 
-        var streamId = peerStream.id || "default";
-        var remoteName = getNameOfRemoteStream(otherUser, streamId) || "default";
+      var streamId = peerStream.id || "default";
+      var remoteName = getNameOfRemoteStream(otherUser, streamId) || "default";
 
-        if (!peerConn.liveRemoteStreams[remoteName]) {
+      if (!peerConn.liveRemoteStreams[remoteName]) {
+        peerConn.remoteStreamIdToName[streamId] = remoteName;
+        peerConn.liveRemoteStreams[remoteName] = true;
+        peerStream.streamName = remoteName;
 
-            peerConn.remoteStreamIdToName[streamId] = remoteName;
-            peerConn.liveRemoteStreams[remoteName] = true;
-            peerStream.streamName = remoteName;
+        var tracks = peerStream.getTracks();
+        peerStream.addEventListener("removetrack", function (e) {
+          var trackIndex = tracks.indexOf(e.track);
+          if (trackIndex !== -1) {
+            tracks.splice(trackIndex, 1);
+          }
+          if (tracks.length === 0) {
+            emitOnStreamClosed(otherUser, peerStream);
+          }
+        });
 
-            var tracks = peerStream.getTracks();
-            peerStream.addEventListener('removetrack', function (e) {
-                var trackIndex = tracks.indexOf(e.track);
-                if (trackIndex !== -1) {
-                    tracks.splice(trackIndex, 1);
-                }
-                if (tracks.length === 0) {
-                    emitOnStreamClosed(otherUser, peerStream);
-                }
-            });
-
-            if (self.streamAcceptor) {
-                self.streamAcceptor(otherUser, peerStream, remoteName);
-                //
-                // Inform the other user that the stream they provided has been received.
-                // This should be moved into signalling at some point
-                //
-                self.sendDataWS(otherUser, "easyrtc_streamReceived", {streamName:remoteName},function(){});
-            }
-        } else {
-            logDebug('processAddedStream: stream ' + remoteName + ' already exist');
+        if (self.streamAcceptor) {
+          self.streamAcceptor(otherUser, peerStream, remoteName);
+          //
+          // Inform the other user that the stream they provided has been received.
+          // This should be moved into signalling at some point
+          //
+          self.sendDataWS(
+            otherUser,
+            "easyrtc_streamReceived",
+            { streamName: remoteName },
+            function () {}
+          );
         }
+      } else {
+        logDebug("processAddedStream: stream " + remoteName + " already exist");
+      }
     }
 
     function processAddedTrack(otherUser, peerStreams) {
+      if (!peerConns[otherUser] || peerConns[otherUser].cancelled) {
+        return;
+      }
 
-        if (!peerConns[otherUser] ||  peerConns[otherUser].cancelled) {
-            return;
-        }
+      var peerConn = peerConns[otherUser];
+      peerConn.trackTimers = peerConn.trackTimers || {};
 
-        var peerConn = peerConns[otherUser];
-        peerConn.trackTimers = peerConn.trackTimers || {};
+      // easyrtc thinks in terms of streams, not tracks.
+      // so we'll add a timeout when the first track event
+      // fires. Firefox produces two events (one of type "video",
+      // and one of type "audio".
 
-        // easyrtc thinks in terms of streams, not tracks.
-        // so we'll add a timeout when the first track event
-        // fires. Firefox produces two events (one of type "video",
-        // and one of type "audio".
-
-        for (var i = 0, l = peerStreams.length; i < l; i++) {
-            var peerStream = peerStreams[i],
-                streamId = peerStream.id || "default";
-            clearTimeout(peerConn.trackTimers[streamId]);
-            peerConn.trackTimers[streamId] = setTimeout(processAddedStream.bind(null, otherUser, peerStream), 100); // Bind peerStream
-        }
+      for (var i = 0, l = peerStreams.length; i < l; i++) {
+        var peerStream = peerStreams[i],
+          streamId = peerStream.id || "default";
+        clearTimeout(peerConn.trackTimers[streamId]);
+        peerConn.trackTimers[streamId] = setTimeout(
+          processAddedStream.bind(null, otherUser, peerStream),
+          100
+        ); // Bind peerStream
+      }
     }
 
     /** @private */
     // TODO split buildPeerConnection it more thant 500 lines
-    function buildPeerConnection(otherUser, isInitiator, failureCB, streamNames) {
-        var pc;
-        var message;
-        var newPeerConn;
+    function buildPeerConnection(
+      otherUser,
+      isInitiator,
+      failureCB,
+      streamNames
+    ) {
+      var pc;
+      var message;
+      var newPeerConn;
 
-        // Apply peer config
-        var pcConfig = pc_config_to_use || {
-            //"offerToReceiveVideo": true,
-            //"offerToReceiveAudio": true,
-            // @ts-ignore
-            //"sdpSemantics": 'unified-plan',
-            //"sdpSemantics": 'plan-b',
-            //"peerIdentity": null,
-            //"bundlePolicy": 'max-compat', // balanced, max-compat, max-bundle
-            //"rtcpMuxPolicy": 'negotiate', // deprecated
-            //"iceTransportPolicy": 'relay',
-            //"iceTransportPolicy": "all",
-            //"iceCandidatePoolSize": 0,
-            // @ts-ignore
-            "voiceActivityDetection": true,
-            // @ts-ignore
-            "offerExtmapAllowMixed": false,
+      // Apply peer config
+      var pcConfig = pc_config_to_use || {
+        //"offerToReceiveVideo": true,
+        //"offerToReceiveAudio": true,
+        // @ts-ignore
+        //"sdpSemantics": 'unified-plan',
+        //"sdpSemantics": 'plan-b',
+        //"peerIdentity": null,
+        //"bundlePolicy": 'max-compat', // balanced, max-compat, max-bundle
+        //"rtcpMuxPolicy": 'negotiate', // deprecated
+        //"iceTransportPolicy": 'relay',
+        //"iceTransportPolicy": "all",
+        //"iceCandidatePoolSize": 0,
+        // @ts-ignore
+        voiceActivityDetection: true,
+        // @ts-ignore
+        offerExtmapAllowMixed: false,
+      };
+
+      // Apply iceServers
+      var iceConfig = pc_ice_config_to_use
+        ? pc_ice_config_to_use
+        : pc_ice_config;
+      if (iceConfig.iceServers) {
+        pcConfig.iceServers = iceConfig.iceServers;
+      }
+
+      logDebug("building peer connection to " + otherUser);
+
+      //
+      // we don't support data channels on chrome versions < 31
+      //
+
+      try {
+        pc = self.createRTCPeerConnection(pcConfig, buildPeerConstraints());
+
+        if (!pc) {
+          message =
+            "Unable to create PeerConnection object, check your ice configuration(" +
+            JSON.stringify(pcConfig) +
+            ")";
+          logDebug(message);
+          throw Error(message);
+        }
+
+        //
+        // turn off data channel support if the browser doesn't support it.
+        //
+
+        if (dataEnabled && typeof pc.createDataChannel === "undefined") {
+          dataEnabled = false;
+        }
+
+        pc.onnegotiationneeded = function (event) {
+          var eventTarget = event.currentTarget || event.target || pc,
+            signalingState = eventTarget.signalingState || "unknown";
+
+          logDebug("onnegotiationneeded", signalingState);
+          if (
+            peerConns[otherUser] &&
+            peerConns[otherUser].enableNegotiateListener
+          ) {
+            initiateSendOffer(otherUser);
+          }
         };
 
-        // Apply iceServers
-        var iceConfig = (pc_ice_config_to_use ? pc_ice_config_to_use : pc_ice_config);
-        if (iceConfig.iceServers) {
-            pcConfig.iceServers = iceConfig.iceServers;
-        }
+        pc.onsignalingstatechange = function () {
+          var eventTarget = event.currentTarget || event.target || pc,
+            signalingState = eventTarget.signalingState || "unknown";
 
-        logDebug("building peer connection to " + otherUser);
+          logDebug("onsignalingstatechange", signalingState);
 
-        //
-        // we don't support data channels on chrome versions < 31
-        //
+          if (signalingStateChangeListener) {
+            signalingStateChangeListener(
+              otherUser,
+              eventTarget,
+              signalingState
+            );
+          }
+        };
 
-        try {
+        pc.oniceconnectionstatechange = function (event) {
+          var eventTarget = event.currentTarget || event.target || pc,
+            connState = eventTarget.iceConnectionState || "unknown";
 
-            pc = self.createRTCPeerConnection(pcConfig, buildPeerConstraints());
+          logDebug("onsignalingstatechange", connState);
 
-            if (!pc) {
-                message = "Unable to create PeerConnection object, check your ice configuration(" + JSON.stringify(pcConfig) + ")";
-                logDebug(message);
-                throw Error(message);
+          if (iceConnectionStateChangeListener) {
+            iceConnectionStateChangeListener(otherUser, eventTarget, connState);
+          }
+
+          switch (connState) {
+            case "connected":
+              if (self.onPeerOpen) {
+                self.onPeerOpen(otherUser);
+              }
+              if (peerConns[otherUser] && peerConns[otherUser].callSuccessCB) {
+                peerConns[otherUser].callSuccessCB(otherUser, "connection");
+              }
+              break;
+            case "failed":
+              if (failureCB) {
+                failureCB(
+                  self.errCodes.NOVIABLEICE,
+                  "No usable STUN/TURN path"
+                );
+              }
+              delete peerConns[otherUser];
+              break;
+            case "disconnected":
+              if (self.onPeerFailing) {
+                self.onPeerFailing(otherUser);
+              }
+              if (peerConns[otherUser]) {
+                peerConns[otherUser].failing = Date.now();
+              }
+              break;
+
+            case "closed":
+              if (self.onPeerClosed) {
+                self.onPeerClosed(otherUser);
+              }
+              break;
+            case "completed":
+              if (peerConns[otherUser]) {
+                if (peerConns[otherUser].failing && self.onPeerRecovered) {
+                  self.onPeerRecovered(
+                    otherUser,
+                    peerConns[otherUser].failing,
+                    Date.now()
+                  );
+                }
+                delete peerConns[otherUser].failing;
+              }
+              break;
+          }
+        };
+
+        pc.onconnection = function () {
+          logDebug("onconnection called prematurely");
+        };
+
+        newPeerConn = {
+          pc: pc,
+          candidatesToSend: [],
+          startedAV: false,
+          connectionAccepted: false,
+          isInitiator: isInitiator,
+          remoteStreamIdToName: {},
+          streamsAddedAcks: {},
+          liveRemoteStreams: {},
+          supportHalfTrickleIce: false,
+        };
+
+        pc.onicecandidate = function (event) {
+          if (peerConns[otherUser] && peerConns[otherUser].cancelled) {
+            return;
+          }
+          var candidateData;
+          if (
+            event.candidate &&
+            peerConns[otherUser] &&
+            peerConns[otherUser].pc &&
+            peerConns[otherUser].pc.iceConnectionState !== "connected"
+          ) {
+            candidateData = {
+              type: "candidate",
+              label: event.candidate.sdpMLineIndex,
+              id: event.candidate.sdpMid,
+              candidate: event.candidate.candidate,
+            };
+
+            if (iceCandidateFilter) {
+              candidateData = iceCandidateFilter(candidateData, false);
+              if (!candidateData) {
+                return;
+              }
             }
-
             //
-            // turn off data channel support if the browser doesn't support it.
+            // some candidates include ip addresses of turn servers. we'll want those
+            // later so we can see if our actual connection uses a turn server.
+            // The keyword "relay" in the candidate identifies it as referencing a
+            // turn server. The \d symbol in the regular expression matches a number.
             //
+            processCandidate(event.candidate.candidate);
 
-            if (dataEnabled && typeof pc.createDataChannel === 'undefined') {
-                dataEnabled = false;
+            if (
+              peerConns[otherUser].connectionAccepted ||
+              peerConns[otherUser].supportHalfTrickleIce
+            ) {
+              sendSignalling(
+                otherUser,
+                "candidate",
+                candidateData,
+                null,
+                function () {
+                  failureCB(self.errCodes.PEER_GONE, "Candidate disappeared");
+                }
+              );
+            } else {
+              peerConns[otherUser].candidatesToSend.push(candidateData);
             }
+          }
+        };
 
-            pc.onnegotiationneeded = function(event) {
-                var eventTarget = event.currentTarget || event.target || pc,
-                    signalingState = eventTarget.signalingState || 'unknown';
+        pc.addEventListener("track", function (event) {
+          logDebug("saw ontrack method invoked, which is expected");
+          processAddedTrack(otherUser, event.streams);
+        });
 
-                logDebug('onnegotiationneeded', signalingState);
-                if (
-                    peerConns[otherUser] &&
-                        (peerConns[otherUser].enableNegotiateListener)
-                ) {
-                    initiateSendOffer(otherUser);
-                }
-            };
+        pc.addEventListener("addstream", function (event) {
+          logDebug("empty onaddstream method invoked, which is expected");
+          processAddedStream(otherUser, event.stream);
+        });
 
-            pc.onsignalingstatechange = function () {
+        pc.addEventListener("removestream", function (event) {
+          logDebug("saw remove on remote media stream");
+          onRemoveStreamHelper(otherUser, event.stream);
+        });
 
-                var eventTarget = event.currentTarget || event.target || pc,
-                    signalingState = eventTarget.signalingState || 'unknown';
+        // Register PeerConn
+        peerConns[otherUser] = newPeerConn;
+      } catch (error) {
+        logDebug("buildPeerConnection error", error);
+        failureCB(self.errCodes.SYSTEM_ERR, error.message);
+        return null;
+      }
 
-                logDebug('onsignalingstatechange', signalingState);
-
-                if (signalingStateChangeListener) {
-                   signalingStateChangeListener(otherUser, eventTarget, signalingState);
-                }
-            };
-
-            pc.oniceconnectionstatechange = function(event) {
-
-                var eventTarget = event.currentTarget || event.target || pc,
-                    connState = eventTarget.iceConnectionState || 'unknown';
-
-                logDebug('onsignalingstatechange', connState);
-
-                if (iceConnectionStateChangeListener) {
-                   iceConnectionStateChangeListener(otherUser, eventTarget, connState);
-                }
-
-                switch (connState) {
-                    case "connected":
-                        if (self.onPeerOpen ) {
-                            self.onPeerOpen(otherUser);
-                        }
-                        if (peerConns[otherUser] && peerConns[otherUser].callSuccessCB) {
-                            peerConns[otherUser].callSuccessCB(otherUser, "connection");
-                        }
-                        break;
-                    case "failed":
-                        if (failureCB) {
-                            failureCB(self.errCodes.NOVIABLEICE, "No usable STUN/TURN path");
-                        }
-                        delete peerConns[otherUser];
-                        break;
-                    case "disconnected":
-                        if (self.onPeerFailing) {
-                            self.onPeerFailing(otherUser);
-                        }
-                        if (peerConns[otherUser]) {
-                            peerConns[otherUser].failing = Date.now();
-                        }
-                        break;
-
-                    case "closed":
-                        if (self.onPeerClosed) {
-                            self.onPeerClosed(otherUser);
-                        }
-                        break;
-                    case "completed":
-                        if (peerConns[otherUser]) {
-                            if (peerConns[otherUser].failing && self.onPeerRecovered) {
-                                self.onPeerRecovered(otherUser, peerConns[otherUser].failing, Date.now());
-                            }
-                            delete peerConns[otherUser].failing;
-                         }
-                        break;
-                }
-            };
-
-            pc.onconnection = function() {
-                logDebug("onconnection called prematurely");
-            };
-
-            newPeerConn = {
-                pc: pc,
-                candidatesToSend: [],
-                startedAV: false,
-                connectionAccepted: false,
-                isInitiator: isInitiator,
-                remoteStreamIdToName: {},
-                streamsAddedAcks: {},
-                liveRemoteStreams: {},
-                supportHalfTrickleIce:false
-            };
-
-            pc.onicecandidate = function(event) {
-                if (peerConns[otherUser] && peerConns[otherUser].cancelled) {
-                    return;
-                }
-                var candidateData;
-                if (
-                    event.candidate &&
-                        peerConns[otherUser] && peerConns[otherUser].pc &&
-                            peerConns[otherUser].pc.iceConnectionState !== 'connected'
-                ) {
-
-                    candidateData = {
-                        type: 'candidate',
-                        label: event.candidate.sdpMLineIndex,
-                        id: event.candidate.sdpMid,
-                        candidate: event.candidate.candidate
-                    };
-
-                    if (iceCandidateFilter) {
-                       candidateData = iceCandidateFilter(candidateData, false);
-                       if (!candidateData) {
-                          return;
-                       }
-                    }
-                    //
-                    // some candidates include ip addresses of turn servers. we'll want those
-                    // later so we can see if our actual connection uses a turn server.
-                    // The keyword "relay" in the candidate identifies it as referencing a
-                    // turn server. The \d symbol in the regular expression matches a number.
-                    //
-                    processCandidate(event.candidate.candidate);
-
-                    if (peerConns[otherUser].connectionAccepted ||
-                        peerConns[otherUser].supportHalfTrickleIce) {
-
-                        sendSignalling(otherUser, "candidate", candidateData, null, function() {
-                            failureCB(self.errCodes.PEER_GONE, "Candidate disappeared");
-                        });
-                    }
-                    else {
-                        peerConns[otherUser].candidatesToSend.push(candidateData);
-                    }
-                }
-            };
-
-            pc.addEventListener('track', function(event) {
-                logDebug("saw ontrack method invoked, which is expected");
-                processAddedTrack(otherUser, event.streams);
-            });
-
-            pc.addEventListener('addstream', function(event) {
-                logDebug("empty onaddstream method invoked, which is expected");
-                processAddedStream(otherUser, event.stream);
-            });
-
-            pc.addEventListener('removestream', function(event) {
-                logDebug("saw remove on remote media stream");
-                onRemoveStreamHelper(otherUser, event.stream);
-            });
-
-            // Register PeerConn
-            peerConns[otherUser] = newPeerConn;
-
-        } catch (error) {
-            logDebug('buildPeerConnection error', error);
-            failureCB(self.errCodes.SYSTEM_ERR, error.message);
-            return null;
-        }
-
-        var i, stream;
-        if (streamNames) {
-            for (i = 0; i < streamNames.length; i++) {
-                stream = getLocalMediaStreamByName(streamNames[i]);
-                if (stream) {
-                    addStreamToPeerConnection(stream, pc);
-                }
-                else {
-                    logDebug("Developer error, attempt to access unknown local media stream " + streamNames[i]);
-                }
-            }
-        }
-        else if (autoInitUserMedia && (self.videoEnabled || self.audioEnabled)) {
-            stream = self.getLocalStream();
+      var i, stream;
+      if (streamNames) {
+        for (i = 0; i < streamNames.length; i++) {
+          stream = getLocalMediaStreamByName(streamNames[i]);
+          if (stream) {
             addStreamToPeerConnection(stream, pc);
+          } else {
+            logDebug(
+              "Developer error, attempt to access unknown local media stream " +
+                streamNames[i]
+            );
+          }
         }
+      } else if (
+        autoInitUserMedia &&
+        (self.videoEnabled || self.audioEnabled)
+      ) {
+        stream = self.getLocalStream();
+        addStreamToPeerConnection(stream, pc);
+      }
 
-        //
-        // This function handles data channel message events.
-        //
-        var pendingTransfer = {};
-        function dataChannelMessageHandler(event) {
-            logDebug("saw dataChannel.onmessage event: ", event.data);
+      //
+      // This function handles data channel message events.
+      //
+      var pendingTransfer = {};
+      function dataChannelMessageHandler(event) {
+        logDebug("saw dataChannel.onmessage event: ", event.data);
 
-            if (event.data === "dataChannelPrimed") {
-                self.sendDataWS(otherUser, "dataChannelPrimed", "");
-            }
-            else {
-                //
-                // Chrome and Firefox Interop is passing a event with a strange data="", perhaps
-                // as it's own form of priming message. Comparing the data against "" doesn't
-                // work, so I'm going with parsing and trapping the parse error.
-                //
-                var msg;
+        if (event.data === "dataChannelPrimed") {
+          self.sendDataWS(otherUser, "dataChannelPrimed", "");
+        } else {
+          //
+          // Chrome and Firefox Interop is passing a event with a strange data="", perhaps
+          // as it's own form of priming message. Comparing the data against "" doesn't
+          // work, so I'm going with parsing and trapping the parse error.
+          //
+          var msg;
 
-                try {
-                    msg = JSON.parse(event.data);
-                } catch (err) {
-                    logDebug('Developer error, unable to parse event data');
-                }
+          try {
+            msg = JSON.parse(event.data);
+          } catch (err) {
+            logDebug("Developer error, unable to parse event data");
+          }
 
-                if (msg) {
-                    if (msg.transfer && msg.transferId) {
-                        if (msg.transfer === 'start') {
-                            logDebug('start transfer #' + msg.transferId);
+          if (msg) {
+            if (msg.transfer && msg.transferId) {
+              if (msg.transfer === "start") {
+                logDebug("start transfer #" + msg.transferId);
 
-                            var parts = parseInt(msg.parts);
-                            pendingTransfer = {
-                                chunks: [],
-                                parts: parts,
-                                transferId: msg.transferId
-                            };
-
-                        } else if (msg.transfer === 'chunk') {
-                            logDebug('got chunk for transfer #' + msg.transferId);
-
-                            // check data is valid
-                            if (!(typeof msg.data === 'string' && msg.data.length <= self.maxP2PMessageLength)) {
-                                logDebug('Developer error, invalid data');
-
-                                // check there's a pending transfer
-                            } else if (!pendingTransfer) {
-                                logDebug('Developer error, unexpected chunk');
-
-                            // check that transferId is valid
-                            } else if (msg.transferId !== pendingTransfer.transferId) {
-                                logDebug('Developer error, invalid transfer id');
-
-                            // check that the max length of transfer is not reached
-                            } else if (pendingTransfer.chunks.length + 1 > pendingTransfer.parts) {
-                                logDebug('Developer error, received too many chunks');
-
-                            } else {
-                                pendingTransfer.chunks.push(msg.data);
-                            }
-
-                        } else if (msg.transfer === 'end') {
-                            logDebug('end of transfer #' + msg.transferId);
-
-                            // check there's a pending transfer
-                            if (!pendingTransfer) {
-                                logDebug('Developer error, unexpected end of transfer');
-
-                            // check that transferId is valid
-                            } else if (msg.transferId !== pendingTransfer.transferId) {
-                                logDebug('Developer error, invalid transfer id');
-
-                            // check that all the chunks were received
-                            } else if (pendingTransfer.chunks.length !== pendingTransfer.parts) {
-                                logDebug('Developer error, received wrong number of chunks');
-
-                            } else {
-                                var chunkedMsg;
-                                try {
-                                    chunkedMsg = JSON.parse(pendingTransfer.chunks.join(''));
-                                } catch (err) {
-                                    logDebug('Developer error, unable to parse message');
-                                }
-
-                                if (chunkedMsg) {
-                                    self.receivePeerDistribute(otherUser, chunkedMsg, null);
-                                }
-                            }
-                            pendingTransfer = {  };
-
-                        } else {
-                            logDebug('Developer error, got an unknown transfer message' + msg.transfer);
-                        }
-                    } else {
-                        self.receivePeerDistribute(otherUser, msg, null);
-                    }
-                }
-            }
-        }
-
-        function initOutGoingChannel(otherUser) {
-            logDebug("saw initOutgoingChannel call");
-
-            if (!peerConns[otherUser]) {
-                logDebug("failed to setup outgoing channel listener");
-                return;
-            }
-
-            var dataChannel = pc.createDataChannel(dataChannelName, self.getDatachannelConstraints());
-            peerConns[otherUser].dataChannelS = dataChannel;
-            peerConns[otherUser].dataChannelR = dataChannel;
-            dataChannel.onmessage = dataChannelMessageHandler;
-            dataChannel.onopen = function(event) {
-                logDebug("saw dataChannel.onopen event");
-
-                if (peerConns[otherUser]) {
-                    dataChannel.send("dataChannelPrimed");
-                }
-            };
-            dataChannel.onclose = function(event) {
-                logDebug("saw dataChannelS.onclose event");
-
-                if (peerConns[otherUser]) {
-                    peerConns[otherUser].dataChannelReady = false;
-                    delete peerConns[otherUser].dataChannelS;
-                }
-                if (onDataChannelClose) {
-                    onDataChannelClose(otherUser);
-                }
-
-                updateConfigurationInfo();
-            };
-        }
-
-        function initIncomingChannel(otherUser) {
-            logDebug("initializing incoming channel handler for " + otherUser);
-
-            if (!peerConns[otherUser]) {
-                logDebug("failed to setup incoming channel listener");
-                return;
-            }
-
-            peerConns[otherUser].pc.ondatachannel = function(event) {
-
-                logDebug("saw incoming data channel");
-
-                if (!peerConns[otherUser]) {
-                    logDebug("failed to setup incoming channel listener");
-                    return;
-                }
-
-                var dataChannel = event.channel;
-                peerConns[otherUser].dataChannelR = dataChannel;
-                peerConns[otherUser].dataChannelS = dataChannel;
-                peerConns[otherUser].dataChannelReady = true;
-                dataChannel.onmessage = dataChannelMessageHandler;
-                dataChannel.onclose = function(event) {
-                    logDebug("saw dataChannelR.onclose event");
-
-                    if (peerConns[otherUser]) {
-                        peerConns[otherUser].dataChannelReady = false;
-                        delete peerConns[otherUser].dataChannelR;
-                    }
-                    if (onDataChannelClose) {
-                        onDataChannelClose(otherUser);
-                    }
-
-                    updateConfigurationInfo();
+                var parts = parseInt(msg.parts);
+                pendingTransfer = {
+                  chunks: [],
+                  parts: parts,
+                  transferId: msg.transferId,
                 };
-                dataChannel.onopen = function(event) {
-                    logDebug("saw dataChannel.onopen event");
+              } else if (msg.transfer === "chunk") {
+                logDebug("got chunk for transfer #" + msg.transferId);
 
-                    if (peerConns[otherUser]) {
-                        dataChannel.send("dataChannelPrimed");
-                    }
-                };
-            };
-        }
+                // check data is valid
+                if (
+                  !(
+                    typeof msg.data === "string" &&
+                    msg.data.length <= self.maxP2PMessageLength
+                  )
+                ) {
+                  logDebug("Developer error, invalid data");
 
-        //
-        //  added for interoperability
-        //
-        // TODO check if both sides have the same browser and versions
-        if (dataEnabled) {
-            self.setPeerListener(function() {
-                if (peerConns[otherUser]) {
-                    peerConns[otherUser].dataChannelReady = true;
-                    if (peerConns[otherUser].callSuccessCB) {
-                        peerConns[otherUser].callSuccessCB(otherUser, "datachannel");
-                    }
-                    if (onDataChannelOpen) {
-                        onDataChannelOpen(otherUser, true);
-                    }
-                    updateConfigurationInfo();
+                  // check there's a pending transfer
+                } else if (!pendingTransfer) {
+                  logDebug("Developer error, unexpected chunk");
+
+                  // check that transferId is valid
+                } else if (msg.transferId !== pendingTransfer.transferId) {
+                  logDebug("Developer error, invalid transfer id");
+
+                  // check that the max length of transfer is not reached
+                } else if (
+                  pendingTransfer.chunks.length + 1 >
+                  pendingTransfer.parts
+                ) {
+                  logDebug("Developer error, received too many chunks");
                 } else {
-                    logDebug("failed to setup outgoing channel listener");
+                  pendingTransfer.chunks.push(msg.data);
                 }
-            }, "dataChannelPrimed", otherUser);
+              } else if (msg.transfer === "end") {
+                logDebug("end of transfer #" + msg.transferId);
 
-            if (isInitiator) {
-                try {
+                // check there's a pending transfer
+                if (!pendingTransfer) {
+                  logDebug("Developer error, unexpected end of transfer");
 
-                    initOutGoingChannel(otherUser);
-                } catch (channelErrorEvent) {
-                    logDebug("failed to init outgoing channel");
-                    failureCB(self.errCodes.SYSTEM_ERR,
-                            self.formatError(channelErrorEvent));
+                  // check that transferId is valid
+                } else if (msg.transferId !== pendingTransfer.transferId) {
+                  logDebug("Developer error, invalid transfer id");
+
+                  // check that all the chunks were received
+                } else if (
+                  pendingTransfer.chunks.length !== pendingTransfer.parts
+                ) {
+                  logDebug("Developer error, received wrong number of chunks");
+                } else {
+                  var chunkedMsg;
+                  try {
+                    chunkedMsg = JSON.parse(pendingTransfer.chunks.join(""));
+                  } catch (err) {
+                    logDebug("Developer error, unable to parse message");
+                  }
+
+                  if (chunkedMsg) {
+                    self.receivePeerDistribute(otherUser, chunkedMsg, null);
+                  }
                 }
+                pendingTransfer = {};
+              } else {
+                logDebug(
+                  "Developer error, got an unknown transfer message" +
+                    msg.transfer
+                );
+              }
+            } else {
+              self.receivePeerDistribute(otherUser, msg, null);
             }
-            if (!isInitiator) {
-                initIncomingChannel(otherUser);
-            }
+          }
+        }
+      }
+
+      function initOutGoingChannel(otherUser) {
+        logDebug("saw initOutgoingChannel call");
+
+        if (!peerConns[otherUser]) {
+          logDebug("failed to setup outgoing channel listener");
+          return;
         }
 
-        pc.onconnection = function() {
-            logDebug("setup pc.onconnection ");
-        };
+        var dataChannel = pc.createDataChannel(
+          dataChannelName,
+          self.getDatachannelConstraints()
+        );
+        peerConns[otherUser].dataChannelS = dataChannel;
+        peerConns[otherUser].dataChannelR = dataChannel;
+        dataChannel.onmessage = dataChannelMessageHandler;
+        dataChannel.onopen = function (event) {
+          logDebug("saw dataChannel.onopen event");
 
-        //
-        // Temporary support for responding to acknowledgements of about streams being added.
-        //
-        self.setPeerListener(function(easyrtcid, msgType, msgData, targeting){
-             if( newPeerConn.streamsAddedAcks[msgData.streamName]) {
-                 (newPeerConn.streamsAddedAcks[msgData.streamName])(easyrtcid, msgData.streamName);
-                 delete newPeerConn.streamsAddedAcks[msgData.streamName];
-             }
-        }, "easyrtc_streamReceived", otherUser);
-        return pc;
+          if (peerConns[otherUser]) {
+            dataChannel.send("dataChannelPrimed");
+          }
+        };
+        dataChannel.onclose = function (event) {
+          logDebug("saw dataChannelS.onclose event");
+
+          if (peerConns[otherUser]) {
+            peerConns[otherUser].dataChannelReady = false;
+            delete peerConns[otherUser].dataChannelS;
+          }
+          if (onDataChannelClose) {
+            onDataChannelClose(otherUser);
+          }
+
+          updateConfigurationInfo();
+        };
+      }
+
+      function initIncomingChannel(otherUser) {
+        logDebug("initializing incoming channel handler for " + otherUser);
+
+        if (!peerConns[otherUser]) {
+          logDebug("failed to setup incoming channel listener");
+          return;
+        }
+
+        peerConns[otherUser].pc.ondatachannel = function (event) {
+          logDebug("saw incoming data channel");
+
+          if (!peerConns[otherUser]) {
+            logDebug("failed to setup incoming channel listener");
+            return;
+          }
+
+          var dataChannel = event.channel;
+          peerConns[otherUser].dataChannelR = dataChannel;
+          peerConns[otherUser].dataChannelS = dataChannel;
+          peerConns[otherUser].dataChannelReady = true;
+          dataChannel.onmessage = dataChannelMessageHandler;
+          dataChannel.onclose = function (event) {
+            logDebug("saw dataChannelR.onclose event");
+
+            if (peerConns[otherUser]) {
+              peerConns[otherUser].dataChannelReady = false;
+              delete peerConns[otherUser].dataChannelR;
+            }
+            if (onDataChannelClose) {
+              onDataChannelClose(otherUser);
+            }
+
+            updateConfigurationInfo();
+          };
+          dataChannel.onopen = function (event) {
+            logDebug("saw dataChannel.onopen event");
+
+            if (peerConns[otherUser]) {
+              dataChannel.send("dataChannelPrimed");
+            }
+          };
+        };
+      }
+
+      //
+      //  added for interoperability
+      //
+      // TODO check if both sides have the same browser and versions
+      if (dataEnabled) {
+        self.setPeerListener(
+          function () {
+            if (peerConns[otherUser]) {
+              peerConns[otherUser].dataChannelReady = true;
+              if (peerConns[otherUser].callSuccessCB) {
+                peerConns[otherUser].callSuccessCB(otherUser, "datachannel");
+              }
+              if (onDataChannelOpen) {
+                onDataChannelOpen(otherUser, true);
+              }
+              updateConfigurationInfo();
+            } else {
+              logDebug("failed to setup outgoing channel listener");
+            }
+          },
+          "dataChannelPrimed",
+          otherUser
+        );
+
+        if (isInitiator) {
+          try {
+            initOutGoingChannel(otherUser);
+          } catch (channelErrorEvent) {
+            logDebug("failed to init outgoing channel");
+            failureCB(
+              self.errCodes.SYSTEM_ERR,
+              self.formatError(channelErrorEvent)
+            );
+          }
+        }
+        if (!isInitiator) {
+          initIncomingChannel(otherUser);
+        }
+      }
+
+      pc.onconnection = function () {
+        logDebug("setup pc.onconnection ");
+      };
+
+      //
+      // Temporary support for responding to acknowledgements of about streams being added.
+      //
+      self.setPeerListener(
+        function (easyrtcid, msgType, msgData, targeting) {
+          if (newPeerConn.streamsAddedAcks[msgData.streamName]) {
+            newPeerConn.streamsAddedAcks[msgData.streamName](
+              easyrtcid,
+              msgData.streamName
+            );
+            delete newPeerConn.streamsAddedAcks[msgData.streamName];
+          }
+        },
+        "easyrtc_streamReceived",
+        otherUser
+      );
+      return pc;
     }
 
     /** @private */
     function doAnswerBody(caller, msgData, streamNames) {
-        if( !peerConns[caller] ) {
-            buildPeerConnection(caller, false, function(message) {
-                self.showError(self.errCodes.SYSTEM_ERR, message);
-              }, streamNames);
+      if (!peerConns[caller]) {
+        buildPeerConnection(
+          caller,
+          false,
+          function (message) {
+            self.showError(self.errCodes.SYSTEM_ERR, message);
+          },
+          streamNames
+        );
+      }
+      var newPeerConn = peerConns[caller];
+      var pc = newPeerConn.pc;
+      if (!pc) {
+        logDebug("buildPeerConnection failed. Call not answered");
+        return;
+      }
+      var setLocalAndSendMessage1 = function (sessionDescription) {
+        if (newPeerConn.cancelled) {
+          return;
         }
-        var newPeerConn = peerConns[caller];
-        var pc = newPeerConn.pc;
-        if (!pc) {
-            logDebug("buildPeerConnection failed. Call not answered");
-            return;
-        }
-        var setLocalAndSendMessage1 = function(sessionDescription) {
 
-            if (newPeerConn.cancelled) {
-                return;
-            }
+        var sendAnswer = function () {
+          logDebug("sending answer");
 
-            var sendAnswer = function() {
-                logDebug("sending answer");
+          function onSignalSuccess() {
+            logDebug("sending success");
+          }
 
-                function onSignalSuccess() {
-                    logDebug("sending success");
-                }
+          function onSignalFailure(errorCode, errorText) {
+            logDebug("sending error");
+            delete peerConns[caller];
+            self.showError(errorCode, errorText);
+          }
 
-                function onSignalFailure(errorCode, errorText) {
-                    logDebug("sending error");
-                    delete peerConns[caller];
-                    self.showError(errorCode, errorText);
-                }
+          newPeerConn.pendingAwnser = false;
+          sendSignalling(
+            caller,
+            "answer",
+            sessionDescription,
+            onSignalSuccess,
+            onSignalFailure
+          );
+          peerConns[caller].connectionAccepted = true;
+          sendQueuedCandidates(caller, onSignalSuccess, onSignalFailure);
 
-                newPeerConn.pendingAwnser = false;
-                sendSignalling(caller, "answer", sessionDescription, onSignalSuccess, onSignalFailure);
-                peerConns[caller].connectionAccepted = true;
-                sendQueuedCandidates(caller, onSignalSuccess, onSignalFailure);
-
-                if (pc.connectDataConnection) {
-                    logDebug("calling connectDataConnection(5002,5001)");
-                    pc.connectDataConnection(5002, 5001);
-                }
-            };
-
-            if (sdpLocalFilter) {
-                sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
-            }
-
-            pc.setLocalDescription(sessionDescription).then(sendAnswer, function(message) {
-                newPeerConn.pendingAwnser = false;
-                self.showError(self.errCodes.INTERNAL_ERR, "setLocalDescription: " + message);
-            });
+          if (pc.connectDataConnection) {
+            logDebug("calling connectDataConnection(5002,5001)");
+            pc.connectDataConnection(5002, 5001);
+          }
         };
 
-        var sd = new RTCSessionDescription(msgData);
+        if (sdpLocalFilter) {
+          sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
+        }
 
-        if (!sd) {
-            throw "Could not create the RTCSessionDescription";
+        pc.setLocalDescription(sessionDescription).then(
+          sendAnswer,
+          function (message) {
+            newPeerConn.pendingAwnser = false;
+            self.showError(
+              self.errCodes.INTERNAL_ERR,
+              "setLocalDescription: " + message
+            );
+          }
+        );
+      };
+
+      var sd = new RTCSessionDescription(msgData);
+
+      if (!sd) {
+        throw "Could not create the RTCSessionDescription";
+      }
+
+      logDebug("sdp ||  " + JSON.stringify(sd));
+
+      var invokeCreateAnswer = function () {
+        if (newPeerConn.cancelled) {
+          logDebug("invokeCreateAnswer.canceled", pc.signalingState);
+          return;
+        }
+        if (newPeerConn.pendingAwnser) {
+          logDebug("invokeCreateAnswer.pending", pc.signalingState);
+        }
+
+        logDebug("invokeCreateAnswer", pc.signalingState);
+        newPeerConn.pendingAwnser = true;
+        pc.createAnswer(receivedMediaConstraints)
+          .then(setLocalAndSendMessage1)
+          .catch(function (reason) {
+            newPeerConn.pendingAwnser = false;
+            self.showError(
+              self.errCodes.INTERNAL_ERR,
+              "create-answer: " + reason
+            );
+          });
+      };
+
+      logDebug("about to call setRemoteDescription in doAnswer");
+
+      try {
+        if (sdpRemoteFilter) {
+          //sd.sdp = sdpRemoteFilter(sd.sdp);
+          sd = new RTCSessionDescription({
+            type: sd.type,
+            sdp: sdpRemoteFilter(sd.sdp),
+          });
         }
 
         logDebug("sdp ||  " + JSON.stringify(sd));
 
-        var invokeCreateAnswer = function() {
-            if (newPeerConn.cancelled) {
-                logDebug('invokeCreateAnswer.canceled', pc.signalingState);
-                return;
-            }
-            if (newPeerConn.pendingAwnser) {
-                logDebug('invokeCreateAnswer.pending', pc.signalingState);
-            }
-
-            logDebug('invokeCreateAnswer', pc.signalingState);
-            newPeerConn.pendingAwnser = true;
-            pc.createAnswer(receivedMediaConstraints)
-                .then(setLocalAndSendMessage1)
-                .catch(function(reason) {
-                    newPeerConn.pendingAwnser = false;
-                    self.showError(self.errCodes.INTERNAL_ERR, "create-answer: " + reason);
-                });
-        };
-
-        logDebug("about to call setRemoteDescription in doAnswer");
-
-        try {
-
-            if (sdpRemoteFilter) {
-                //sd.sdp = sdpRemoteFilter(sd.sdp);
-                sd = new RTCSessionDescription({
-                    type: sd.type,
-                    sdp: sdpRemoteFilter(sd.sdp)
-                });
-            }
-
-            logDebug("sdp ||  " + JSON.stringify(sd));
-
-            pc.setRemoteDescription(sd).then(invokeCreateAnswer, function(message) {
-                self.showError(self.errCodes.INTERNAL_ERR, "doAnswerBody setRemoteDescription failed: " + message);
-                // TODO sendSignaling reject/failure
-            });
-        } catch (srdError) {
-            logDebug("set remote description failed");
-            self.showError(self.errCodes.INTERNAL_ERR, "doAnswerBody setRemoteDescription error: " + srdError.message);
+        pc.setRemoteDescription(sd).then(
+          invokeCreateAnswer,
+          function (message) {
+            self.showError(
+              self.errCodes.INTERNAL_ERR,
+              "doAnswerBody setRemoteDescription failed: " + message
+            );
             // TODO sendSignaling reject/failure
-        }
+          }
+        );
+      } catch (srdError) {
+        logDebug("set remote description failed");
+        self.showError(
+          self.errCodes.INTERNAL_ERR,
+          "doAnswerBody setRemoteDescription error: " + srdError.message
+        );
+        // TODO sendSignaling reject/failure
+      }
     }
 
     /** @private */
     function doAnswer(caller, msgData, streamNames) {
-        if (!streamNames && autoInitUserMedia) {
-            var localStream = self.getLocalStream();
-            if (!localStream && (self.videoEnabled || self.audioEnabled)) {
-                self.initMediaSource(
-                        function() {
-                            doAnswer(caller, msgData);
-                        },
-                        function(errorCode, error) {
-                            self.showError(self.errCodes.MEDIA_ERR, self.format(self.getConstantString("localMediaError")));
-                        });
-                return;
+      if (!streamNames && autoInitUserMedia) {
+        var localStream = self.getLocalStream();
+        if (!localStream && (self.videoEnabled || self.audioEnabled)) {
+          self.initMediaSource(
+            function () {
+              doAnswer(caller, msgData);
+            },
+            function (errorCode, error) {
+              self.showError(
+                self.errCodes.MEDIA_ERR,
+                self.format(self.getConstantString("localMediaError"))
+              );
             }
+          );
+          return;
         }
-        if (use_fresh_ice_each_peer) {
-            self.getFreshIceConfig(function(succeeded) {
-                if (succeeded) {
-                    doAnswerBody(caller, msgData, streamNames);
-                }
-                else {
-                    self.showError(self.errCodes.CALL_ERR, "Failed to get fresh ice config");
-                }
-            });
-        }
-        else {
+      }
+      if (use_fresh_ice_each_peer) {
+        self.getFreshIceConfig(function (succeeded) {
+          if (succeeded) {
             doAnswerBody(caller, msgData, streamNames);
-        }
+          } else {
+            self.showError(
+              self.errCodes.CALL_ERR,
+              "Failed to get fresh ice config"
+            );
+          }
+        });
+      } else {
+        doAnswerBody(caller, msgData, streamNames);
+      }
     }
 
-
     /** @private */
-    function callBody(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB, streamNames) {
-        acceptancePending[otherUser] = true;
-        var pc = buildPeerConnection(otherUser, true, callFailureCB, streamNames);
-        var message;
-        if (!pc) {
-            message = "buildPeerConnection failed, call not completed";
-            logDebug(message);
-            throw message;
-        }
+    function callBody(
+      otherUser,
+      callSuccessCB,
+      callFailureCB,
+      wasAcceptedCB,
+      streamNames
+    ) {
+      acceptancePending[otherUser] = true;
+      var pc = buildPeerConnection(otherUser, true, callFailureCB, streamNames);
+      var message;
+      if (!pc) {
+        message = "buildPeerConnection failed, call not completed";
+        logDebug(message);
+        throw message;
+      }
 
-        peerConns[otherUser].callSuccessCB = callSuccessCB;
-        peerConns[otherUser].callFailureCB = callFailureCB;
-        peerConns[otherUser].wasAcceptedCB = wasAcceptedCB;
-        initiateSendOffer(otherUser);
+      peerConns[otherUser].callSuccessCB = callSuccessCB;
+      peerConns[otherUser].callFailureCB = callFailureCB;
+      peerConns[otherUser].wasAcceptedCB = wasAcceptedCB;
+      initiateSendOffer(otherUser);
     }
 
     function initiateSendOffer(otherUser) {
-        var peerConnObj = peerConns[otherUser];
-        if( !peerConnObj ) {
-           logDebug("message attempt to send offer for nonexistent peer connection " + otherUser);
-           return;
+      var peerConnObj = peerConns[otherUser];
+      if (!peerConnObj) {
+        logDebug(
+          "message attempt to send offer for nonexistent peer connection " +
+            otherUser
+        );
+        return;
+      }
+
+      var pc = peerConnObj.pc;
+      var callFailureCB = peerConnObj.callFailureCB || self.showError;
+      var setLocalAndSendMessage0 = function (sessionDescription) {
+        if (peerConnObj.cancelled) {
+          logDebug(
+            "initiateSendOffer.setLocalAndSendMessage0.ignored",
+            peerConnObj.cancelled,
+            peerConnObj.sendingOffer
+          );
+          return;
         }
-
-        var pc = peerConnObj.pc;
-        var callFailureCB = peerConnObj.callFailureCB || self.showError;
-        var setLocalAndSendMessage0 = function(sessionDescription) {
-            if (peerConnObj.cancelled) {
-                logDebug('initiateSendOffer.setLocalAndSendMessage0.ignored', peerConnObj.cancelled, peerConnObj.sendingOffer);
-                return;
-            }
-            var sendOffer = function() {
-                peerConnObj.sendingOffer = false;
-                sendSignalling(otherUser, "offer", sessionDescription, null, peerConnObj.callFailureCB);
-            };
-            if (sdpLocalFilter) {
-                sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
-            }
-
-            pc.setLocalDescription(sessionDescription).then(sendOffer, function(errorText) {
-                peerConnObj.sendingOffer = false;
-                callFailureCB(self.errCodes.CALL_ERR, errorText);
-            });
+        var sendOffer = function () {
+          peerConnObj.sendingOffer = false;
+          sendSignalling(
+            otherUser,
+            "offer",
+            sessionDescription,
+            null,
+            peerConnObj.callFailureCB
+          );
         };
-
-        if (peerConnObj.sendingOffer) {
-            logDebug('initiateSendOffer.setLocalAndSendMessage0.ignored', peerConnObj.sendingOffer);
-            return;
+        if (sdpLocalFilter) {
+          sessionDescription.sdp = sdpLocalFilter(sessionDescription.sdp);
         }
 
-        peerConnObj.sendingOffer = true;
-        pc.createOffer(receivedMediaConstraints)
-            .then(setLocalAndSendMessage0)
-            .catch(function(errorObj) {
-                peerConnObj.sendingOffer = false;
-                callFailureCB(self.errCodes.CALL_ERR,  JSON.stringify(errorObj));
-            });
+        pc.setLocalDescription(sessionDescription).then(
+          sendOffer,
+          function (errorText) {
+            peerConnObj.sendingOffer = false;
+            callFailureCB(self.errCodes.CALL_ERR, errorText);
+          }
+        );
+      };
+
+      if (peerConnObj.sendingOffer) {
+        logDebug(
+          "initiateSendOffer.setLocalAndSendMessage0.ignored",
+          peerConnObj.sendingOffer
+        );
+        return;
+      }
+
+      peerConnObj.sendingOffer = true;
+      pc.createOffer(receivedMediaConstraints)
+        .then(setLocalAndSendMessage0)
+        .catch(function (errorObj) {
+          peerConnObj.sendingOffer = false;
+          callFailureCB(self.errCodes.CALL_ERR, JSON.stringify(errorObj));
+        });
     }
 
     /**
@@ -4419,78 +4667,106 @@ var Easyrtc = function() {
      *            }
      *        });
      */
-    this.call = function(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB, streamNames) {
-
-        if (streamNames) {
-            if (typeof streamNames === "string") { // accept a string argument if passed.
-                streamNames = [streamNames];
-            }
-            else if (typeof streamNames.length === "undefined") {
-                self.showError(self.errCodes.DEVELOPER_ERR, "easyrtc.call passed bad streamNames");
-                return;
-            }
+    this.call = function (
+      otherUser,
+      callSuccessCB,
+      callFailureCB,
+      wasAcceptedCB,
+      streamNames
+    ) {
+      if (streamNames) {
+        if (typeof streamNames === "string") {
+          // accept a string argument if passed.
+          streamNames = [streamNames];
+        } else if (typeof streamNames.length === "undefined") {
+          self.showError(
+            self.errCodes.DEVELOPER_ERR,
+            "easyrtc.call passed bad streamNames"
+          );
+          return;
         }
+      }
 
-        logDebug("initiating peer to peer call to " + otherUser +
-                    " audio=" + self.audioEnabled +
-                    " video=" + self.videoEnabled +
-                    " data=" + dataEnabled);
+      logDebug(
+        "initiating peer to peer call to " +
+          otherUser +
+          " audio=" +
+          self.audioEnabled +
+          " video=" +
+          self.videoEnabled +
+          " data=" +
+          dataEnabled
+      );
 
+      if (!self.supportsPeerConnections()) {
+        callFailureCB(
+          self.errCodes.CALL_ERR,
+          self.getConstantString("noWebrtcSupport")
+        );
+        return;
+      }
 
-        if (!self.supportsPeerConnections()) {
-            callFailureCB(self.errCodes.CALL_ERR, self.getConstantString("noWebrtcSupport"));
-            return;
+      var message;
+      //
+      // If we are sharing audio/video and we haven't allocated the local media stream yet,
+      // we'll do so, recalling our self on success.
+      //
+      if (!streamNames && autoInitUserMedia) {
+        var stream = self.getLocalStream();
+        if (!stream && (self.audioEnabled || self.videoEnabled)) {
+          self.initMediaSource(function () {
+            self.call(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB);
+          }, callFailureCB);
+          return;
         }
+      }
 
-        var message;
-        //
-        // If we are sharing audio/video and we haven't allocated the local media stream yet,
-        // we'll do so, recalling our self on success.
-        //
-        if (!streamNames && autoInitUserMedia) {
-            var stream = self.getLocalStream();
-            if (!stream && (self.audioEnabled || self.videoEnabled)) {
-                self.initMediaSource(function() {
-                    self.call(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB);
-                }, callFailureCB);
-                return;
-            }
-        }
+      if (!self.webSocket) {
+        message = "Attempt to make a call prior to connecting to service";
+        logDebug(message);
+        throw message;
+      }
 
-        if (!self.webSocket) {
-            message = "Attempt to make a call prior to connecting to service";
-            logDebug(message);
-            throw message;
-        }
-
-        //
-        // If B calls A, and then A calls B before accepting, then A should treat the attempt to
-        // call B as a positive offer to B's offer.
-        //
-        if (offersPending[otherUser]) {
-
-            wasAcceptedCB(true, otherUser);
-            doAnswer(otherUser, offersPending[otherUser], streamNames);
-            self.callCancelled(otherUser, false);
+      //
+      // If B calls A, and then A calls B before accepting, then A should treat the attempt to
+      // call B as a positive offer to B's offer.
+      //
+      if (offersPending[otherUser]) {
+        wasAcceptedCB(true, otherUser);
+        doAnswer(otherUser, offersPending[otherUser], streamNames);
+        self.callCancelled(otherUser, false);
 
         // do we already have a pending call?
-        } else if (typeof acceptancePending[otherUser] !== 'undefined') {
-            message = "Call already pending acceptance";
-            logDebug(message);
-            callFailureCB(self.errCodes.ALREADY_CONNECTED, message);
-
-        } else if (use_fresh_ice_each_peer) {
-            self.getFreshIceConfig(function(succeeded) {
-                if (succeeded) {
-                    callBody(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB, streamNames);
-                } else {
-                    callFailureCB(self.errCodes.CALL_ERR, "Attempt to get fresh ice configuration failed");
-                }
-            });
-        }
-        else {
-            callBody(otherUser, callSuccessCB, callFailureCB, wasAcceptedCB, streamNames);
-        }
+      } else if (typeof acceptancePending[otherUser] !== "undefined") {
+        message = "Call already pending acceptance";
+        logDebug(message);
+        callFailureCB(self.errCodes.ALREADY_CONNECTED, message);
+      } else if (use_fresh_ice_each_peer) {
+        self.getFreshIceConfig(function (succeeded) {
+          if (succeeded) {
+            callBody(
+              otherUser,
+              callSuccessCB,
+              callFailureCB,
+              wasAcceptedCB,
+              streamNames
+            );
+          } else {
+            callFailureCB(
+              self.errCodes.CALL_ERR,
+              "Attempt to get fresh ice configuration failed"
+            );
+          }
+        });
+      } else {
+        callBody(
+          otherUser,
+          callSuccessCB,
+          callFailureCB,
+          wasAcceptedCB,
+          streamNames
+        );
+      }
     };
 
     /** @private */
@@ -4499,18 +4775,17 @@ var Easyrtc = function() {
     // and new .active. Also fallback .enable on track for Firefox.
     //
     function isStreamActive(stream) {
+      var isActive;
 
-        var isActive;
+      if (stream.active === true || stream.ended === false) {
+        isActive = true;
+      } else {
+        isActive = stream.getTracks().reduce(function (track) {
+          return track.enabled;
+        });
+      }
 
-        if (stream.active === true || stream.ended === false)  {
-            isActive = true;
-        } else {
-            isActive = stream.getTracks().reduce(function (track) {
-                return track.enabled;
-            });
-        }
-
-        return isActive;
+      return isActive;
     }
 
     /** @private */
@@ -4518,77 +4793,75 @@ var Easyrtc = function() {
 
     /** @private */
     function clearQueuedMessages(caller) {
-        queuedMessages[caller] = {
-            candidates: []
-        };
+      queuedMessages[caller] = {
+        candidates: [],
+      };
     }
 
     /** @private */
     function closePeer(otherUser) {
+      if (acceptancePending[otherUser]) {
+        delete acceptancePending[otherUser];
+      }
+      if (offersPending[otherUser]) {
+        delete offersPending[otherUser];
+      }
 
-        if (acceptancePending[otherUser]) {
-            delete acceptancePending[otherUser];
-        }
-        if (offersPending[otherUser]) {
-            delete offersPending[otherUser];
-        }
-
-        if (
-          !peerConns[otherUser].cancelled &&
-              peerConns[otherUser].pc
-        ) {
-            try {
-                var remoteStreams = peerConns[otherUser].pc.getRemoteStreams();
-                for (var i = 0; i < remoteStreams.length; i++) {
-                    if (isStreamActive(remoteStreams[i])) {
-                        emitOnStreamClosed(otherUser, remoteStreams[i]);
-                        stopStream(remoteStreams[i]);
-                    }
-                }
-
-                peerConns[otherUser].pc.close();
-                peerConns[otherUser].cancelled = true;
-                logDebug("peer closed");
-            } catch (err) {
-                logDebug("peer " + otherUser + " close failed:" + err);
-            } finally {
-                if (self.onPeerClosed) {
-                    self.onPeerClosed(otherUser);
-                }
+      if (!peerConns[otherUser].cancelled && peerConns[otherUser].pc) {
+        try {
+          var remoteStreams = peerConns[otherUser].pc.getRemoteStreams();
+          for (var i = 0; i < remoteStreams.length; i++) {
+            if (isStreamActive(remoteStreams[i])) {
+              emitOnStreamClosed(otherUser, remoteStreams[i]);
+              stopStream(remoteStreams[i]);
             }
+          }
+
+          peerConns[otherUser].pc.close();
+          peerConns[otherUser].cancelled = true;
+          logDebug("peer closed");
+        } catch (err) {
+          logDebug("peer " + otherUser + " close failed:" + err);
+        } finally {
+          if (self.onPeerClosed) {
+            self.onPeerClosed(otherUser);
+          }
         }
+      }
     }
 
     /** @private */
     function hangupBody(otherUser) {
+      logDebug("Hanging up on " + otherUser);
+      clearQueuedMessages(otherUser);
 
-        logDebug("Hanging up on " + otherUser);
-        clearQueuedMessages(otherUser);
+      if (peerConns[otherUser]) {
+        if (peerConns[otherUser].pc) {
+          closePeer(otherUser);
+        }
 
         if (peerConns[otherUser]) {
-
-            if (peerConns[otherUser].pc) {
-                closePeer(otherUser);
-            }
-
-            if (peerConns[otherUser]) {
-                delete peerConns[otherUser];
-            }
-
-            updateConfigurationInfo();
-
-            if (self.webSocket) {
-                sendSignalling(otherUser, "hangup", null, function() {
-                    logDebug("hangup succeeds");
-                }, function(errorCode, errorText) {
-                    logDebug("hangup failed:" + errorText);
-                    self.showError(errorCode, errorText);
-                });
-            }
+          delete peerConns[otherUser];
         }
+
+        updateConfigurationInfo();
+
+        if (self.webSocket) {
+          sendSignalling(
+            otherUser,
+            "hangup",
+            null,
+            function () {
+              logDebug("hangup succeeds");
+            },
+            function (errorCode, errorText) {
+              logDebug("hangup failed:" + errorText);
+              self.showError(errorCode, errorText);
+            }
+          );
+        }
+      }
     }
-
-
 
     /**
      * Hang up on a particular user or all users.
@@ -4596,9 +4869,9 @@ var Easyrtc = function() {
      *  @example
      *     easyrtc.hangup(someEasyrtcid);
      */
-    this.hangup = function(otherUser) {
-        hangupBody(otherUser);
-        updateConfigurationInfo();
+    this.hangup = function (otherUser) {
+      hangupBody(otherUser);
+      updateConfigurationInfo();
     };
 
     /**
@@ -4606,20 +4879,19 @@ var Easyrtc = function() {
      * @example
      *    easyrtc.hangupAll();
      */
-    this.hangupAll = function() {
-
-        var sawAConnection = false;
-        for (var otherUser in peerConns) {
-            if (!peerConns.hasOwnProperty(otherUser)) {
-                continue;
-            }
-            sawAConnection = true;
-            hangupBody(otherUser);
+    this.hangupAll = function () {
+      var sawAConnection = false;
+      for (var otherUser in peerConns) {
+        if (!peerConns.hasOwnProperty(otherUser)) {
+          continue;
         }
+        sawAConnection = true;
+        hangupBody(otherUser);
+      }
 
-        if (sawAConnection) {
-            updateConfigurationInfo();
-        }
+      if (sawAConnection) {
+        updateConfigurationInfo();
+      }
     };
 
     /**
@@ -4628,11 +4900,11 @@ var Easyrtc = function() {
      * @returns {Boolean} true if data channels work and are ready to be used
      *   between the two peers.
      */
-    this.doesDataChannelWork = function(otherUser) {
-        if (!peerConns[otherUser]) {
-            return false;
-        }
-        return !!peerConns[otherUser].dataChannelReady;
+    this.doesDataChannelWork = function (otherUser) {
+      if (!peerConns[otherUser]) {
+        return false;
+      }
+      return !!peerConns[otherUser].dataChannelReady;
     };
 
     /**
@@ -4642,14 +4914,20 @@ var Easyrtc = function() {
      * @param {String} remoteStreamName an optional argument supplying the streamName.
      * @returns {Object} A mediaStream.
      */
-    this.getRemoteStream = function(easyrtcid, remoteStreamName) {
-        if (!peerConns[easyrtcid]) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "attempt to get stream of uncalled party");
-            throw "Developer err: no such stream";
-        }
-        else {
-            return getRemoteStreamByName(peerConns[easyrtcid], easyrtcid, remoteStreamName);
-        }
+    this.getRemoteStream = function (easyrtcid, remoteStreamName) {
+      if (!peerConns[easyrtcid]) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "attempt to get stream of uncalled party"
+        );
+        throw "Developer err: no such stream";
+      } else {
+        return getRemoteStreamByName(
+          peerConns[easyrtcid],
+          easyrtcid,
+          remoteStreamName
+        );
+      }
     };
 
     /**
@@ -4661,20 +4939,26 @@ var Easyrtc = function() {
      *    easyrtc.makeLocalStreamFromRemoteStream(sourcePeer, "default", "forwardedStream");
      *    easyrtc.call(nextPeer, callSuccessCB, callFailureCB, wasAcceptedCB, ["forwardedStream"]);
      */
-    this.makeLocalStreamFromRemoteStream = function(easyrtcid, remoteStreamName, localStreamName) {
-        var remoteStream;
-        if (peerConns[easyrtcid].pc) {
-            remoteStream = getRemoteStreamByName(peerConns[easyrtcid], easyrtcid, remoteStreamName);
-            if (remoteStream) {
-                registerLocalMediaStreamByName(remoteStream, localStreamName);
-            }
-            else {
-                throw "Developer err: no such stream";
-            }
+    this.makeLocalStreamFromRemoteStream = function (
+      easyrtcid,
+      remoteStreamName,
+      localStreamName
+    ) {
+      var remoteStream;
+      if (peerConns[easyrtcid].pc) {
+        remoteStream = getRemoteStreamByName(
+          peerConns[easyrtcid],
+          easyrtcid,
+          remoteStreamName
+        );
+        if (remoteStream) {
+          registerLocalMediaStreamByName(remoteStream, localStreamName);
+        } else {
+          throw "Developer err: no such stream";
         }
-        else {
-            throw "Developer err: no such peer ";
-        }
+      } else {
+        throw "Developer err: no such peer ";
+      }
     };
 
     /**
@@ -4685,25 +4969,23 @@ var Easyrtc = function() {
      *   that the stream has been received. The receiptHandler gets called with an easyrtcid and a stream name. This
      *   argument is optional.
      */
-    this.addStreamToCall = function(easyrtcId, streamName, receiptHandler) {
-        if( !streamName) {
-            streamName = "default";
+    this.addStreamToCall = function (easyrtcId, streamName, receiptHandler) {
+      if (!streamName) {
+        streamName = "default";
+      }
+      var stream = getLocalMediaStreamByName(streamName);
+      if (!stream) {
+        logDebug("attempt to add nonexistent stream " + streamName);
+      } else if (!peerConns[easyrtcId] || !peerConns[easyrtcId].pc) {
+        logDebug("Can't add stream before a call has started.");
+      } else {
+        var pc = peerConns[easyrtcId].pc;
+        peerConns[easyrtcId].enableNegotiateListener = true;
+        addStreamToPeerConnection(stream, pc);
+        if (receiptHandler) {
+          peerConns[easyrtcId].streamsAddedAcks[streamName] = receiptHandler;
         }
-        var stream = getLocalMediaStreamByName(streamName);
-        if (!stream) {
-            logDebug("attempt to add nonexistent stream " + streamName);
-        }
-        else if (!peerConns[easyrtcId] || !peerConns[easyrtcId].pc) {
-            logDebug("Can't add stream before a call has started.");
-        }
-        else {
-            var pc = peerConns[easyrtcId].pc;
-            peerConns[easyrtcId].enableNegotiateListener = true;
-            addStreamToPeerConnection(stream, pc);
-            if (receiptHandler) {
-                peerConns[easyrtcId].streamsAddedAcks[streamName] = receiptHandler;
-            }
-        }
+      }
     };
 
     /**
@@ -4711,74 +4993,69 @@ var Easyrtc = function() {
      * @param easyrtcId
      * @param streamName
      */
-    this.removeStreamFromCall = function(easyrtcId, streamName) {
-        if( !streamName) {
-            streamName = "default";
-        }
-        var stream = getLocalMediaStreamByName(streamName);
-        if (!stream) {
-            logDebug("attempt to remove nonexistent stream " + streamName);
-        }
-        else if (!peerConns[easyrtcId] || !peerConns[easyrtcId].pc) {
-            logDebug("Can't remove stream before a call has started.");
-        }
-        else {
-            var pc = peerConns[easyrtcId].pc;
-            peerConns[easyrtcId].enableNegotiateListener = true;
-            pc.removeStream(stream);
-        }
-
+    this.removeStreamFromCall = function (easyrtcId, streamName) {
+      if (!streamName) {
+        streamName = "default";
+      }
+      var stream = getLocalMediaStreamByName(streamName);
+      if (!stream) {
+        logDebug("attempt to remove nonexistent stream " + streamName);
+      } else if (!peerConns[easyrtcId] || !peerConns[easyrtcId].pc) {
+        logDebug("Can't remove stream before a call has started.");
+      } else {
+        var pc = peerConns[easyrtcId].pc;
+        peerConns[easyrtcId].enableNegotiateListener = true;
+        pc.removeStream(stream);
+      }
     };
 
     /** @private */
-    this.dumpPeerConnectionInfo = function() {
-        var i;
-        for (var peer in peerConns) {
-            if (peerConns.hasOwnProperty(peer)) {
-                var pc = peerConns[peer].pc;
-                var remotes = pc.getRemoteStreams();
-                var remoteIds = [];
-                for (i = 0; i < remotes.length; i++) {
-                    remoteIds.push(remotes[i].id);
-                }
-                var locals = pc.getLocalStreams();
-                var localIds = [];
-                for (i = 0; i < locals.length; i++) {
-                    localIds.push(locals[i].id);
-                }
+    this.dumpPeerConnectionInfo = function () {
+      var i;
+      for (var peer in peerConns) {
+        if (peerConns.hasOwnProperty(peer)) {
+          var pc = peerConns[peer].pc;
+          var remotes = pc.getRemoteStreams();
+          var remoteIds = [];
+          for (i = 0; i < remotes.length; i++) {
+            remoteIds.push(remotes[i].id);
+          }
+          var locals = pc.getLocalStreams();
+          var localIds = [];
+          for (i = 0; i < locals.length; i++) {
+            localIds.push(locals[i].id);
+          }
 
-                logDebug("For peer " + peer);
-                logDebug("    " + JSON.stringify({local: localIds, remote: remoteIds}));
-            }
+          logDebug("For peer " + peer);
+          logDebug(
+            "    " + JSON.stringify({ local: localIds, remote: remoteIds })
+          );
         }
+      }
     };
 
     /** @private */
     function onRemoteHangup(otherUser) {
+      logDebug("Saw onRemote hangup event");
+      clearQueuedMessages(otherUser);
 
-        logDebug("Saw onRemote hangup event");
-        clearQueuedMessages(otherUser);
+      if (peerConns[otherUser]) {
+        if (peerConns[otherUser].pc) {
+          closePeer(otherUser);
+        } else {
+          if (self.callCancelled) {
+            self.callCancelled(otherUser, true);
+          }
+        }
 
         if (peerConns[otherUser]) {
-
-            if (peerConns[otherUser].pc) {
-                closePeer(otherUser);
-            }
-            else {
-                if (self.callCancelled) {
-                    self.callCancelled(otherUser, true);
-                }
-            }
-
-            if (peerConns[otherUser]) {
-                delete peerConns[otherUser];
-            }
+          delete peerConns[otherUser];
         }
-        else {
-            if (self.callCancelled) {
-                self.callCancelled(otherUser, true);
-            }
+      } else {
+        if (self.callCancelled) {
+          self.callCancelled(otherUser, true);
         }
+      }
     }
 
     /** @private */
@@ -4786,16 +5063,16 @@ var Easyrtc = function() {
     // checks to see if a particular peer is in any room at all.
     //
     function isPeerInAnyRoom(id) {
-        var roomName;
-        for (roomName in lastLoggedInList) {
-            if (!lastLoggedInList.hasOwnProperty(roomName)) {
-                continue;
-            }
-            if (lastLoggedInList[roomName][id]) {
-                return true;
-            }
+      var roomName;
+      for (roomName in lastLoggedInList) {
+        if (!lastLoggedInList.hasOwnProperty(roomName)) {
+          continue;
         }
-        return false;
+        if (lastLoggedInList[roomName][id]) {
+          return true;
+        }
+      }
+      return false;
     }
 
     /**
@@ -4803,48 +5080,50 @@ var Easyrtc = function() {
      * If it isn't, we assume it's logged out.
      * @param {string} easyrtcid the easyrtcId of the peer.
      */
-    this.isPeerInAnyRoom = function(easyrtcid) {
-         return isPeerInAnyRoom(easyrtcid);
+    this.isPeerInAnyRoom = function (easyrtcid) {
+      return isPeerInAnyRoom(easyrtcid);
     };
 
     /** @private */
     function processLostPeers(peersInRoom) {
-        var id;
-        //
-        // check to see the person is still in at least one room. If not, we'll hangup
-        // on them. This isn't the correct behavior, but it's the best we can do without
-        // changes to the server.
-        //
-        for (id in peerConns) {
-            if (peerConns.hasOwnProperty(id) &&
-                    typeof peersInRoom[id] === 'undefined') {
-                if (!isPeerInAnyRoom(id)) {
-                    if (peerConns[id].pc || peerConns[id].isInitiator) {
-                        onRemoteHangup(id);
-                    }
-                    delete offersPending[id];
-                    delete acceptancePending[id];
-                    clearQueuedMessages(id);
-                }
+      var id;
+      //
+      // check to see the person is still in at least one room. If not, we'll hangup
+      // on them. This isn't the correct behavior, but it's the best we can do without
+      // changes to the server.
+      //
+      for (id in peerConns) {
+        if (
+          peerConns.hasOwnProperty(id) &&
+          typeof peersInRoom[id] === "undefined"
+        ) {
+          if (!isPeerInAnyRoom(id)) {
+            if (peerConns[id].pc || peerConns[id].isInitiator) {
+              onRemoteHangup(id);
             }
+            delete offersPending[id];
+            delete acceptancePending[id];
+            clearQueuedMessages(id);
+          }
         }
+      }
 
-        for (id in offersPending) {
-            if (offersPending.hasOwnProperty(id) && !isPeerInAnyRoom(id)) {
-                onRemoteHangup(id);
-                clearQueuedMessages(id);
-                delete offersPending[id];
-                delete acceptancePending[id];
-            }
+      for (id in offersPending) {
+        if (offersPending.hasOwnProperty(id) && !isPeerInAnyRoom(id)) {
+          onRemoteHangup(id);
+          clearQueuedMessages(id);
+          delete offersPending[id];
+          delete acceptancePending[id];
         }
+      }
 
-        for (id in acceptancePending) {
-            if (acceptancePending.hasOwnProperty(id) && !isPeerInAnyRoom(id)) {
-                onRemoteHangup(id);
-                clearQueuedMessages(id);
-                delete acceptancePending[id];
-            }
+      for (id in acceptancePending) {
+        if (acceptancePending.hasOwnProperty(id) && !isPeerInAnyRoom(id)) {
+          onRemoteHangup(id);
+          clearQueuedMessages(id);
+          delete acceptancePending[id];
         }
+      }
     }
 
     /**
@@ -4866,25 +5145,24 @@ var Easyrtc = function() {
      * @private
      */
     function addAggregatingTimer(key, callback, period) {
-        if( !period) {
-            period = 100; // 0.1 second
-        }
-        var counter = 0;
-        if( aggregatingTimers[key]) {
-            clearTimeout(aggregatingTimers[key].timer);
-            counter = aggregatingTimers[key].counter;
-        }
-        if( counter > 20) {
-            delete aggregatingTimers[key];
-            callback();
-        }
-        else {
-            aggregatingTimers[key] = {counter: counter +1};
-            aggregatingTimers[key].timer = setTimeout(function () {
-                delete aggregatingTimers[key];
-                callback();
-            }, period);
-        }
+      if (!period) {
+        period = 100; // 0.1 second
+      }
+      var counter = 0;
+      if (aggregatingTimers[key]) {
+        clearTimeout(aggregatingTimers[key].timer);
+        counter = aggregatingTimers[key].counter;
+      }
+      if (counter > 20) {
+        delete aggregatingTimers[key];
+        callback();
+      } else {
+        aggregatingTimers[key] = { counter: counter + 1 };
+        aggregatingTimers[key].timer = setTimeout(function () {
+          delete aggregatingTimers[key];
+          callback();
+        }, period);
+      }
     }
 
     /** @private */
@@ -4892,517 +5170,526 @@ var Easyrtc = function() {
     // this function gets called for each room when there is a room update.
     //
     function processOccupantList(roomName, occupantList) {
-        var myInfo = null;
-        var reducedList = {};
+      var myInfo = null;
+      var reducedList = {};
 
-        var id;
-        for (id in occupantList) {
-            if (occupantList.hasOwnProperty(id)) {
-                if (id === self.myEasyrtcid) {
-                    myInfo = occupantList[id];
-                }
-                else {
-                    reducedList[id] = occupantList[id];
-                }
-            }
+      var id;
+      for (id in occupantList) {
+        if (occupantList.hasOwnProperty(id)) {
+          if (id === self.myEasyrtcid) {
+            myInfo = occupantList[id];
+          } else {
+            reducedList[id] = occupantList[id];
+          }
         }
-        //
-        // processLostPeers detects peers that have gone away and performs
-        // house keeping accordingly.
-        //
-        processLostPeers(reducedList);
-        //
-        //
-        //
-        addAggregatingTimer("roomOccupants&" + roomName, function(){
-            if (roomOccupantListener) {
-                roomOccupantListener(roomName, reducedList, myInfo);
-            }
-            self.emitEvent("roomOccupants", {roomName:roomName, occupants:lastLoggedInList});
-        }, 100);
+      }
+      //
+      // processLostPeers detects peers that have gone away and performs
+      // house keeping accordingly.
+      //
+      processLostPeers(reducedList);
+      //
+      //
+      //
+      addAggregatingTimer(
+        "roomOccupants&" + roomName,
+        function () {
+          if (roomOccupantListener) {
+            roomOccupantListener(roomName, reducedList, myInfo);
+          }
+          self.emitEvent("roomOccupants", {
+            roomName: roomName,
+            occupants: lastLoggedInList,
+          });
+        },
+        100
+      );
     }
 
     /** @private */
     function onChannelMsg(msg, ackAcceptorFunc) {
-
-        var targeting = {};
-        if (ackAcceptorFunc) {
-            ackAcceptorFunc(self.ackMessage);
+      var targeting = {};
+      if (ackAcceptorFunc) {
+        ackAcceptorFunc(self.ackMessage);
+      }
+      if (msg.targetEasyrtcid) {
+        targeting.targetEasyrtcid = msg.targetEasyrtcid;
+      }
+      if (msg.targetRoom) {
+        targeting.targetRoom = msg.targetRoom;
+      }
+      if (msg.targetGroup) {
+        targeting.targetGroup = msg.targetGroup;
+      }
+      if (msg.senderEasyrtcid) {
+        self.receivePeerDistribute(msg.senderEasyrtcid, msg, targeting);
+      } else {
+        if (receiveServerCB) {
+          receiveServerCB(msg.msgType, msg.msgData, targeting);
+        } else {
+          logDebug("Unhandled server message " + JSON.stringify(msg));
         }
-        if (msg.targetEasyrtcid) {
-            targeting.targetEasyrtcid = msg.targetEasyrtcid;
-        }
-        if (msg.targetRoom) {
-            targeting.targetRoom = msg.targetRoom;
-        }
-        if (msg.targetGroup) {
-            targeting.targetGroup = msg.targetGroup;
-        }
-        if (msg.senderEasyrtcid) {
-            self.receivePeerDistribute(msg.senderEasyrtcid, msg, targeting);
-        }
-        else {
-            if (receiveServerCB) {
-                receiveServerCB(msg.msgType, msg.msgData, targeting);
-            }
-            else {
-                logDebug("Unhandled server message " + JSON.stringify(msg));
-            }
-        }
+      }
     }
 
     /** @private */
     function processUrl(url) {
-        var ipAddress;
-        if (url.indexOf('turn:') === 0 || url.indexOf('turns:') === 0) {
-            ipAddress = url.split(/[@:&]/g)[1];
-            self._turnServers[ipAddress] = true;
-        } else if (url.indexOf('stun:') === 0 || url.indexOf('stuns:') === 0) {
-            ipAddress = url.split(/[@:&]/g)[1];
-            self._stunServers[ipAddress] = true;
-        }
+      var ipAddress;
+      if (url.indexOf("turn:") === 0 || url.indexOf("turns:") === 0) {
+        ipAddress = url.split(/[@:&]/g)[1];
+        self._turnServers[ipAddress] = true;
+      } else if (url.indexOf("stun:") === 0 || url.indexOf("stuns:") === 0) {
+        ipAddress = url.split(/[@:&]/g)[1];
+        self._stunServers[ipAddress] = true;
+      }
     }
 
     /** @private */
     function processIceConfig(iceConfig) {
+      var i, j, item;
 
-        var i, j, item;
+      pc_ice_config = {
+        iceServers: [],
+      };
 
+      self._turnServers = {};
+      self._stunServers = {};
+
+      if (
+        !iceConfig ||
+        !iceConfig.iceServers ||
+        typeof iceConfig.iceServers.length === "undefined"
+      ) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "iceConfig received from server didn't have an array called iceServers, ignoring it"
+        );
+      } else {
         pc_ice_config = {
-            iceServers: []
+          iceServers: iceConfig.iceServers,
         };
+      }
 
-        self._turnServers = {};
-        self._stunServers = {};
+      for (i = 0; i < iceConfig.iceServers.length; i++) {
+        item = iceConfig.iceServers[i];
+        if (item.urls && item.urls.length) {
+          // Handle legacy options urls has string
+          if (typeof item.urls === "string") {
+            processUrl(item.urls);
 
-        if (
-            !iceConfig ||
-                !iceConfig.iceServers ||
-                    typeof iceConfig.iceServers.length === "undefined"
-        ) {
-            self.showError(
-                self.errCodes.DEVELOPER_ERR,
-                "iceConfig received from server didn't have an array called iceServers, ignoring it"
-            );
-        } else {
-            pc_ice_config = {
-                iceServers: iceConfig.iceServers
-            };
-        }
-
-        for (i = 0; i < iceConfig.iceServers.length; i++) {
-            item = iceConfig.iceServers[i];
-            if (item.urls && item.urls.length) {
-                // Handle legacy options urls has string
-                if (typeof item.urls === 'string') {
-                   processUrl(item.urls);
-
-                // Handle proper options urls as array
-                } else if (item.urls instanceof Array) {
-                   for( j = 0; j < item.urls.length; j++ ) {
-                      processUrl(item.urls[j]);
-                   }
-               }
-            } else if (item.url) {
-               processUrl(item.url);
+            // Handle proper options urls as array
+          } else if (item.urls instanceof Array) {
+            for (j = 0; j < item.urls.length; j++) {
+              processUrl(item.urls[j]);
             }
-         }
+          }
+        } else if (item.url) {
+          processUrl(item.url);
+        }
+      }
     }
 
     /** @private */
     function processSessionData(sessionData) {
-        if (sessionData) {
-            if (sessionData.easyrtcsid) {
-                self.easyrtcsid = sessionData.easyrtcsid;
-            }
-            if (sessionData.field) {
-                sessionFields = sessionData.field;
-            }
+      if (sessionData) {
+        if (sessionData.easyrtcsid) {
+          self.easyrtcsid = sessionData.easyrtcsid;
         }
+        if (sessionData.field) {
+          sessionFields = sessionData.field;
+        }
+      }
     }
 
     /** @private */
     function processRoomData(roomData) {
-        self.roomData = roomData;
+      self.roomData = roomData;
 
-        var k, roomName,
-            stuffToRemove, stuffToAdd,
-            id, removeId;
+      var k, roomName, stuffToRemove, stuffToAdd, id, removeId;
 
-        for (roomName in self.roomData) {
-            if (!self.roomData.hasOwnProperty(roomName)) {
-                continue;
-            }
-            if (roomData[roomName].roomStatus === "join") {
-                if (!(self.roomJoin[roomName])) {
-                    self.roomJoin[roomName] = roomData[roomName];
-                }
-                var mediaIds = buildMediaIds();
-                if (mediaIds !== {}) {
-                    self.setRoomApiField(roomName, "mediaIds", mediaIds);
-                }
-            }
-            else if (roomData[roomName].roomStatus === "leave") {
-                if (self.roomEntryListener) {
-                    self.roomEntryListener(false, roomName);
-                }
-                delete self.roomJoin[roomName];
-                delete lastLoggedInList[roomName];
-                continue;
-            }
-
-            if (roomData[roomName].clientList) {
-                lastLoggedInList[roomName] = roomData[roomName].clientList;
-            }
-            else if (roomData[roomName].clientListDelta) {
-                stuffToAdd = roomData[roomName].clientListDelta.updateClient;
-                if (stuffToAdd) {
-                    for (id in stuffToAdd) {
-                        if (!stuffToAdd.hasOwnProperty(id)) {
-                            continue;
-                        }
-                        if (!lastLoggedInList[roomName]) {
-                            lastLoggedInList[roomName] = [];
-                        }
-                        if( !lastLoggedInList[roomName][id] ) {
-                           lastLoggedInList[roomName][id] = stuffToAdd[id];
-                        }
-                        for( k in stuffToAdd[id] ) {
-                           if( k === "apiField" || k === "presence") {
-                              lastLoggedInList[roomName][id][k] = stuffToAdd[id][k];
-                           }
-                        }
-                    }
-                }
-                stuffToRemove = roomData[roomName].clientListDelta.removeClient;
-                if (stuffToRemove && lastLoggedInList[roomName]) {
-                    for (removeId in stuffToRemove) {
-                        if (stuffToRemove.hasOwnProperty(removeId)) {
-                            delete lastLoggedInList[roomName][removeId];
-                        }
-                    }
-                }
-            }
-            if (self.roomJoin[roomName] && roomData[roomName].field) {
-                fields.rooms[roomName] = roomData[roomName].field;
-            }
-            if (roomData[roomName].roomStatus === "join") {
-                if (self.roomEntryListener) {
-                    self.roomEntryListener(true, roomName);
-                }
-            }
-            processOccupantList(roomName, lastLoggedInList[roomName]);
+      for (roomName in self.roomData) {
+        if (!self.roomData.hasOwnProperty(roomName)) {
+          continue;
         }
-        self.emitEvent("roomOccupant", lastLoggedInList);
+        if (roomData[roomName].roomStatus === "join") {
+          if (!self.roomJoin[roomName]) {
+            self.roomJoin[roomName] = roomData[roomName];
+          }
+          var mediaIds = buildMediaIds();
+          if (mediaIds !== {}) {
+            self.setRoomApiField(roomName, "mediaIds", mediaIds);
+          }
+        } else if (roomData[roomName].roomStatus === "leave") {
+          if (self.roomEntryListener) {
+            self.roomEntryListener(false, roomName);
+          }
+          delete self.roomJoin[roomName];
+          delete lastLoggedInList[roomName];
+          continue;
+        }
+
+        if (roomData[roomName].clientList) {
+          lastLoggedInList[roomName] = roomData[roomName].clientList;
+        } else if (roomData[roomName].clientListDelta) {
+          stuffToAdd = roomData[roomName].clientListDelta.updateClient;
+          if (stuffToAdd) {
+            for (id in stuffToAdd) {
+              if (!stuffToAdd.hasOwnProperty(id)) {
+                continue;
+              }
+              if (!lastLoggedInList[roomName]) {
+                lastLoggedInList[roomName] = [];
+              }
+              if (!lastLoggedInList[roomName][id]) {
+                lastLoggedInList[roomName][id] = stuffToAdd[id];
+              }
+              for (k in stuffToAdd[id]) {
+                if (k === "apiField" || k === "presence") {
+                  lastLoggedInList[roomName][id][k] = stuffToAdd[id][k];
+                }
+              }
+            }
+          }
+          stuffToRemove = roomData[roomName].clientListDelta.removeClient;
+          if (stuffToRemove && lastLoggedInList[roomName]) {
+            for (removeId in stuffToRemove) {
+              if (stuffToRemove.hasOwnProperty(removeId)) {
+                delete lastLoggedInList[roomName][removeId];
+              }
+            }
+          }
+        }
+        if (self.roomJoin[roomName] && roomData[roomName].field) {
+          fields.rooms[roomName] = roomData[roomName].field;
+        }
+        if (roomData[roomName].roomStatus === "join") {
+          if (self.roomEntryListener) {
+            self.roomEntryListener(true, roomName);
+          }
+        }
+        processOccupantList(roomName, lastLoggedInList[roomName]);
+      }
+      self.emitEvent("roomOccupant", lastLoggedInList);
     }
 
     var processCandidateBody = function (caller, msgData) {
+      //
+      // if we've discarded the peer connection, ignore the candidate.
+      //
+      if (!peerConns[caller]) {
+        return;
+      }
 
-        //
-        // if we've discarded the peer connection, ignore the candidate.
-        //
-        if (!peerConns[caller]) {
-            return;
+      if (
+        peerConns[caller] &&
+        peerConns[caller].pc &&
+        peerConns[caller].pc.iceConnectionState === "connected"
+      ) {
+        return;
+      }
+
+      if (iceCandidateFilter) {
+        msgData = iceCandidateFilter(msgData, true);
+        if (!msgData) {
+          return;
         }
+      }
 
-        if (peerConns[caller] && peerConns[caller].pc &&
-                peerConns[caller].pc.iceConnectionState === 'connected') {
-            return;
-        }
+      if (!msgData.candidate) {
+        self.showError(
+          self.errCodes.ICECANDIDATE_ERR,
+          "bad ice empty candidate: " + JSON.stringify(msgData)
+        );
+        return;
+      }
 
-        if (iceCandidateFilter) {
-           msgData = iceCandidateFilter(msgData, true);
-           if (!msgData) {
-              return;
-           }
-        }
+      var candidate = new RTCIceCandidate({
+        sdpMLineIndex: msgData.label,
+        sdpMid: msgData.id,
+        candidate: msgData.candidate,
+      });
 
-        if (!msgData.candidate) {
-           self.showError(self.errCodes.ICECANDIDATE_ERR, "bad ice empty candidate: " + JSON.stringify(msgData));
-           return;
-        }
+      var pc = peerConns[caller].pc;
 
-        var candidate = new RTCIceCandidate({
-            sdpMLineIndex: msgData.label,
-            sdpMid: msgData.id,
-            candidate: msgData.candidate
-        });
+      function iceAddSuccess() {
+        logDebug("iceAddSuccess: " + JSON.stringify(msgData));
+        processCandidate(msgData.candidate);
+      }
 
-        var pc = peerConns[caller].pc;
+      function iceAddFailure(domError) {
+        self.showError(
+          self.errCodes.ICECANDIDATE_ERR,
+          "bad ice candidate (" +
+            domError.name +
+            "): " +
+            JSON.stringify(msgData)
+        );
+      }
 
-        function iceAddSuccess() {
-            logDebug("iceAddSuccess: " + JSON.stringify(msgData));
-            processCandidate(msgData.candidate);
-        }
-
-        function iceAddFailure(domError) {
-               self.showError(self.errCodes.ICECANDIDATE_ERR,
-                   "bad ice candidate (" + domError.name + "): " + JSON.stringify(msgData)
-               );
-        }
-
-        pc.addIceCandidate(candidate, iceAddSuccess, iceAddFailure);
+      pc.addIceCandidate(candidate, iceAddSuccess, iceAddFailure);
     };
 
-    var flushCachedCandidates = function(caller) {
-        var i;
+    var flushCachedCandidates = function (caller) {
+      var i;
+      if (queuedMessages[caller]) {
+        for (i = 0; i < queuedMessages[caller].candidates.length; i++) {
+          processCandidateBody(caller, queuedMessages[caller].candidates[i]);
+        }
+        delete queuedMessages[caller];
+      }
+    };
+
+    var processOffer = function (caller, msgData) {
+      //
+      // if we already have a peer connection in place, then we can bypass the whole
+      // acceptance thing and simply generate an offer.
+      //
+      if (peerConns[caller]) {
+        doAnswer(caller, msgData, []);
+        return;
+      }
+
+      var helper = function (wasAccepted, streamNames) {
+        if (streamNames) {
+          if (typeof streamNames === "string") {
+            streamNames = [streamNames];
+          } else if (streamNames.length === undefined) {
+            self.showError(
+              self.errCodes.DEVELOPER_ERR,
+              "accept callback passed invalid streamNames"
+            );
+            return;
+          }
+        }
+
+        logDebug("offer accept=" + wasAccepted);
+
+        delete offersPending[caller];
+
+        if (wasAccepted) {
+          if (!self.supportsPeerConnections()) {
+            self.showError(
+              self.errCodes.CALL_ERR,
+              self.getConstantString("noWebrtcSupport")
+            );
+            return;
+          }
+          doAnswer(caller, msgData, streamNames);
+          flushCachedCandidates(caller);
+        } else {
+          sendSignalling(caller, "reject", null, null, null);
+          clearQueuedMessages(caller);
+        }
+      };
+      //
+      // There is a very rare case of two callers sending each other offers
+      // before receiving the others offer. In such a case, the caller with the
+      // greater valued easyrtcid will delete its pending call information and do a
+      // simple answer to the other caller's offer.
+      //
+      if (acceptancePending[caller] && caller < self.myEasyrtcid) {
+        delete acceptancePending[caller];
         if (queuedMessages[caller]) {
-            for (i = 0; i < queuedMessages[caller].candidates.length; i++) {
-                processCandidateBody(caller, queuedMessages[caller].candidates[i]);
-            }
-            delete queuedMessages[caller];
+          delete queuedMessages[caller];
         }
-    };
-
-    var processOffer = function(caller, msgData) {
-
-        //
-        // if we already have a peer connection in place, then we can bypass the whole
-        // acceptance thing and simply generate an offer.
-        //
-        if( peerConns[caller] ) {
-            doAnswer(caller, msgData, []);
-            return;
+        if (peerConns[caller]) {
+          if (peerConns[caller].wasAcceptedCB) {
+            peerConns[caller].wasAcceptedCB(true, caller);
+          }
+          delete peerConns[caller];
         }
+        helper(true);
+        return;
+      }
 
-        var helper = function(wasAccepted, streamNames) {
-
-            if (streamNames) {
-                if (typeof streamNames === "string") {
-                    streamNames = [streamNames];
-                }
-                else if (streamNames.length === undefined) {
-                    self.showError(self.errCodes.DEVELOPER_ERR, "accept callback passed invalid streamNames");
-                    return;
-                }
-            }
-
-            logDebug("offer accept=" + wasAccepted);
-
-            delete offersPending[caller];
-
-            if (wasAccepted) {
-                if (!self.supportsPeerConnections()) {
-                    self.showError(self.errCodes.CALL_ERR, self.getConstantString("noWebrtcSupport"));
-                    return;
-                }
-                doAnswer(caller, msgData, streamNames);
-                flushCachedCandidates(caller);
-            }
-            else {
-                sendSignalling(caller, "reject", null, null, null);
-                clearQueuedMessages(caller);
-            }
-        };
-        //
-        // There is a very rare case of two callers sending each other offers
-        // before receiving the others offer. In such a case, the caller with the
-        // greater valued easyrtcid will delete its pending call information and do a
-        // simple answer to the other caller's offer.
-        //
-        if (acceptancePending[caller] && caller < self.myEasyrtcid) {
-            delete acceptancePending[caller];
-            if (queuedMessages[caller]) {
-                delete queuedMessages[caller];
-            }
-            if (peerConns[caller]) {
-                if (peerConns[caller].wasAcceptedCB) {
-                    peerConns[caller].wasAcceptedCB(true, caller);
-                }
-                delete peerConns[caller];
-            }
-            helper(true);
-            return;
-        }
-
-        offersPending[caller] = msgData;
-        if (!self.acceptCheck) {
-            helper(true);
-        }
-        else {
-            self.acceptCheck(caller, helper);
-        }
+      offersPending[caller] = msgData;
+      if (!self.acceptCheck) {
+        helper(true);
+      } else {
+        self.acceptCheck(caller, helper);
+      }
     };
 
     function processReject(caller) {
-        delete acceptancePending[caller];
-        if (queuedMessages[caller]) {
-            delete queuedMessages[caller];
+      delete acceptancePending[caller];
+      if (queuedMessages[caller]) {
+        delete queuedMessages[caller];
+      }
+      if (peerConns[caller]) {
+        if (peerConns[caller].wasAcceptedCB) {
+          peerConns[caller].wasAcceptedCB(false, caller);
         }
-        if (peerConns[caller]) {
-            if (peerConns[caller].wasAcceptedCB) {
-                peerConns[caller].wasAcceptedCB(false, caller);
-            }
-            delete peerConns[caller];
-        }
+        delete peerConns[caller];
+      }
     }
 
     function processAnswer(caller, msgData) {
+      delete acceptancePending[caller];
 
-        delete acceptancePending[caller];
+      //
+      // if we've discarded the peer connection, ignore the answer.
+      //
+      if (!peerConns[caller]) {
+        return;
+      }
 
-        //
-        // if we've discarded the peer connection, ignore the answer.
-        //
-        if (!peerConns[caller]) {
-            return;
+      var isInitialConnect = !peerConns[caller].connectionAccepted;
+      if (isInitialConnect) {
+        peerConns[caller].connectionAccepted = true;
+        if (peerConns[caller].wasAcceptedCB) {
+          peerConns[caller].wasAcceptedCB(true, caller);
+        }
+      }
+      var onSignalSuccess = function () {};
+      var onSignalFailure = function (errorCode, errorText) {
+        if (peerConns[caller]) {
+          delete peerConns[caller];
+        }
+        self.showError(errorCode, errorText);
+      };
+      // peerConns[caller].startedAV = true;
+      sendQueuedCandidates(caller, onSignalSuccess, onSignalFailure);
+      var pc = peerConns[caller].pc;
+      var sdp;
+      try {
+        if (sdpRemoteFilter) {
+          sdp = sdpRemoteFilter(msgData.sdp);
+        } else {
+          sdp = msgData.sdp;
+        }
+      } catch (userError) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "sdpRemoteFilter failed case: " + userError
+        );
+      }
+      var sd = new RTCSessionDescription({ type: msgData.type, sdp: sdp });
+      if (!sd) {
+        throw "Could not create the RTCSessionDescription";
+      }
+
+      logDebug("about to call initiating setRemoteDescription");
+
+      try {
+        if (sdpRemoteFilter) {
+          //sd.sdp = sdpRemoteFilter(sd.sdp);
+          sd = new RTCSessionDescription({
+            type: sd.type,
+            sdp: sdpRemoteFilter(sd.sdp),
+          });
         }
 
-        var isInitialConnect = !peerConns[caller].connectionAccepted;
-        if( isInitialConnect ) {
-            peerConns[caller].connectionAccepted = true;
-            if (peerConns[caller].wasAcceptedCB) {
-                peerConns[caller].wasAcceptedCB(true, caller);
-            }
-        }
-        var onSignalSuccess = function() {
+        logDebug("sdp ||  " + JSON.stringify(sd));
 
-        };
-        var onSignalFailure = function(errorCode, errorText) {
-            if (peerConns[caller]) {
-                delete peerConns[caller];
-            }
-            self.showError(errorCode, errorText);
-        };
-        // peerConns[caller].startedAV = true;
-        sendQueuedCandidates(caller, onSignalSuccess, onSignalFailure);
-        var pc = peerConns[caller].pc;
-        var sdp;
-        try {
-           if( sdpRemoteFilter ) {
-              sdp = sdpRemoteFilter(msgData.sdp);
-           }
-           else {
-              sdp = msgData.sdp;
-           }
-        }
-        catch(userError) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "sdpRemoteFilter failed case: " + userError);
-        }
-        var sd = new RTCSessionDescription({type:msgData.type, sdp:sdp});
-        if (!sd) {
-            throw "Could not create the RTCSessionDescription";
-        }
-
-        logDebug("about to call initiating setRemoteDescription");
-
-        try {
-            if (sdpRemoteFilter) {
-                //sd.sdp = sdpRemoteFilter(sd.sdp);
-                sd = new RTCSessionDescription({
-                    type: sd.type,
-                    sdp: sdpRemoteFilter(sd.sdp)
-                });
-            }
-
-            logDebug("sdp ||  " + JSON.stringify(sd));
-
-            pc.setRemoteDescription(sd).then(function() {
-                if (pc.connectDataConnection) {
-                    logDebug("calling connectDataConnection(5001,5002)");
-                    if( isInitialConnect ) {
-                        pc.connectDataConnection(5001, 5002); // these are like ids for data channels
-                    }
-                    try {
-                       var streamName;
-                       var acks = peerConns[caller].streamsAddedAcks || {};
-                       for( streamName in acks ) {
-                            if (acks.hasOwnProperty(streamName)) {
-                               acks[streamName](caller, streamName);
-                            }
-                       }
-                       peerConns[caller].streamsAddedAcks = {};
-                    }
-                    catch(userError) {
-                       self.showError(self.errCodes.DEVELOPER_ERR, "streamAdded receipt function failed");
-                    }
+        pc.setRemoteDescription(sd).then(
+          function () {
+            if (pc.connectDataConnection) {
+              logDebug("calling connectDataConnection(5001,5002)");
+              if (isInitialConnect) {
+                pc.connectDataConnection(5001, 5002); // these are like ids for data channels
+              }
+              try {
+                var streamName;
+                var acks = peerConns[caller].streamsAddedAcks || {};
+                for (streamName in acks) {
+                  if (acks.hasOwnProperty(streamName)) {
+                    acks[streamName](caller, streamName);
+                  }
                 }
-            }, function(message){
-                 logDebug("processAnswer setRemoteDescription failed: ", message);
-                // TODO sendSignaling reject/failure
-             });
-        } catch (smdException) {
-            logDebug("processAnswer setRemoteDescription error: ", smdException);
+                peerConns[caller].streamsAddedAcks = {};
+              } catch (userError) {
+                self.showError(
+                  self.errCodes.DEVELOPER_ERR,
+                  "streamAdded receipt function failed"
+                );
+              }
+            }
+          },
+          function (message) {
+            logDebug("processAnswer setRemoteDescription failed: ", message);
             // TODO sendSignaling reject/failure
-        }
+          }
+        );
+      } catch (smdException) {
+        logDebug("processAnswer setRemoteDescription error: ", smdException);
+        // TODO sendSignaling reject/failure
+      }
 
-        flushCachedCandidates(caller);
+      flushCachedCandidates(caller);
     }
 
     function processCandidateQueue(caller, msgData) {
-        if (peerConns[caller] && peerConns[caller].pc) {
-            processCandidateBody(caller, msgData);
+      if (peerConns[caller] && peerConns[caller].pc) {
+        processCandidateBody(caller, msgData);
+      } else {
+        if (!peerConns[caller]) {
+          queuedMessages[caller] = {
+            candidates: [],
+          };
         }
-        else {
-            if (!peerConns[caller]) {
-                queuedMessages[caller] = {
-                    candidates: []
-                };
-            }
-            queuedMessages[caller].candidates.push(msgData);
-        }
+        queuedMessages[caller].candidates.push(msgData);
+      }
     }
 
     /** @private */
     function onChannelCmd(msg, ackAcceptorFn) {
+      var caller = msg.senderEasyrtcid;
+      var msgType = msg.msgType;
+      var msgData = msg.msgData;
 
-        var caller = msg.senderEasyrtcid;
-        var msgType = msg.msgType;
-        var msgData = msg.msgData;
+      logDebug("received message of type " + msgType);
 
-        logDebug('received message of type ' + msgType);
+      if (typeof queuedMessages[caller] === "undefined") {
+        clearQueuedMessages(caller);
+      }
 
+      switch (msgType) {
+        case "sessionData":
+          processSessionData(msgData.sessionData);
+          break;
+        case "roomData":
+          processRoomData(msgData.roomData);
+          break;
+        case "iceConfig":
+          processIceConfig(msgData.iceConfig);
+          break;
+        case "forwardToUrl":
+          if (msgData.newWindow) {
+            window.open(msgData.forwardToUrl.url);
+          } else {
+            window.location.href = msgData.forwardToUrl.url;
+          }
+          break;
+        case "offer":
+          processOffer(caller, msgData);
+          break;
+        case "reject":
+          processReject(caller);
+          break;
+        case "answer":
+          processAnswer(caller, msgData);
+          break;
+        case "candidate":
+          processCandidateQueue(caller, msgData);
+          break;
+        case "hangup":
+          onRemoteHangup(caller);
+          clearQueuedMessages(caller);
+          break;
+        case "error":
+          self.showError(msgData.errorCode, msgData.errorText);
+          break;
+        default:
+          self.showError(
+            self.errCodes.DEVELOPER_ERR,
+            "received unknown message type from server, msgType is " + msgType
+          );
+          return;
+      }
 
-        if (typeof queuedMessages[caller] === "undefined") {
-            clearQueuedMessages(caller);
-        }
-
-
-        switch (msgType) {
-            case "sessionData":
-                processSessionData(msgData.sessionData);
-                break;
-            case "roomData":
-                processRoomData(msgData.roomData);
-                break;
-            case "iceConfig":
-                processIceConfig(msgData.iceConfig);
-                break;
-            case "forwardToUrl":
-                if (msgData.newWindow) {
-                    window.open(msgData.forwardToUrl.url);
-                }
-                else {
-                    window.location.href = msgData.forwardToUrl.url;
-                }
-                break;
-            case "offer":
-                processOffer(caller, msgData);
-                break;
-            case "reject":
-                processReject(caller);
-                break;
-            case "answer":
-                processAnswer(caller, msgData);
-                break;
-            case "candidate":
-                processCandidateQueue(caller, msgData);
-                break;
-            case "hangup":
-                onRemoteHangup(caller);
-                clearQueuedMessages(caller);
-                break;
-            case "error":
-                self.showError(msgData.errorCode, msgData.errorText);
-                break;
-            default:
-                self.showError(self.errCodes.DEVELOPER_ERR, "received unknown message type from server, msgType is " + msgType);
-                return;
-        }
-
-        if (ackAcceptorFn) {
-            ackAcceptorFn(self.ackMessage);
-        }
+      if (ackAcceptorFn) {
+        ackAcceptorFn(self.ackMessage);
+      }
     }
 
     /**
@@ -5411,19 +5698,23 @@ var Easyrtc = function() {
      * @param {String} statusText - User configurable status string. May be length limited.
      * @example   easyrtc.updatePresence('dnd', 'sleeping');
      */
-    this.updatePresence = function(state, statusText) {
+    this.updatePresence = function (state, statusText) {
+      self.presenceShow = state;
+      self.presenceStatus = statusText;
 
-        self.presenceShow = state;
-        self.presenceStatus = statusText;
-
-        if (self.webSocketConnected) {
-            sendSignalling(null, 'setPresence', {
-                setPresence: {
-                    'show': self.presenceShow,
-                    'status': self.presenceStatus
-                }
-            }, null);
-        }
+      if (self.webSocketConnected) {
+        sendSignalling(
+          null,
+          "setPresence",
+          {
+            setPresence: {
+              show: self.presenceShow,
+              status: self.presenceStatus,
+            },
+          },
+          null
+        );
+      }
     };
 
     /**
@@ -5433,8 +5724,8 @@ var Easyrtc = function() {
      *  }
      * @returns {Object}
      */
-    this.getSessionFields = function() {
-        return sessionFields;
+    this.getSessionFields = function () {
+      return sessionFields;
     };
 
     /**
@@ -5442,13 +5733,12 @@ var Easyrtc = function() {
      * @param {String} name - name of the session field to be fetched.
      * @returns the field value (which can be anything). Returns undefined if the field does not exist.
      */
-    this.getSessionField = function(name) {
-        if (sessionFields[name]) {
-            return sessionFields[name].fieldValue;
-        }
-        else {
-            return undefined;
-        }
+    this.getSessionField = function (name) {
+      if (sessionFields[name]) {
+        return sessionFields[name].fieldValue;
+      } else {
+        return undefined;
+      }
     };
 
     /**
@@ -5462,13 +5752,12 @@ var Easyrtc = function() {
      *         console.log( occupants[i] + " is in the room");
      *     }
      */
-    this.getRoomOccupantsAsArray = function(roomName) {
-        if (!lastLoggedInList[roomName]) {
-            return null;
-        }
-        else {
-            return Object.keys(lastLoggedInList[roomName]);
-        }
+    this.getRoomOccupantsAsArray = function (roomName) {
+      if (!lastLoggedInList[roomName]) {
+        return null;
+      } else {
+        return Object.keys(lastLoggedInList[roomName]);
+      }
     };
 
     /**
@@ -5481,8 +5770,8 @@ var Easyrtc = function() {
      *          console.log("yep, " + some_easyrtcid + " is in the room");
      *      }
      */
-    this.getRoomOccupantsAsMap = function(roomName) {
-        return lastLoggedInList[roomName];
+    this.getRoomOccupantsAsMap = function (roomName) {
+      return lastLoggedInList[roomName];
     };
 
     /**
@@ -5492,8 +5781,8 @@ var Easyrtc = function() {
      * @param ipAddress
      * @returns {boolean} true if ip address is known to be that of a turn server, false otherwise.
      */
-    this.isTurnServer = function(ipAddress) {
-        return !!self._turnServers[ipAddress];
+    this.isTurnServer = function (ipAddress) {
+      return !!self._turnServers[ipAddress];
     };
 
     /**
@@ -5503,8 +5792,8 @@ var Easyrtc = function() {
      * @param {string} ipAddress
      * @returns {boolean} true if ip address is known to be that of a stun server, false otherwise.
      */
-    this.isStunServer = function(ipAddress) {
-        return !!self._stunServers[ipAddress];
+    this.isStunServer = function (ipAddress) {
+      return !!self._stunServers[ipAddress];
     };
 
     /**
@@ -5512,34 +5801,29 @@ var Easyrtc = function() {
      * This should be done periodically by long running applications.
      * @param {Function} callback is called with a value of true on success, false on failure.
      */
-    this.getFreshIceConfig = function(callback) {
-        var dataToShip = {
-            msgType: "getIceConfig",
-            msgData: {}
-        };
-        if (!callback) {
-            callback = function() {
-            };
-        }
-        if (self.webSocket) {
-            self.webSocket.json.emit("easyrtcCmd", dataToShip,
-                    function(ackMsg) {
-                        if (ackMsg.msgType === "iceConfig") {
-                            processIceConfig(ackMsg.msgData.iceConfig);
-                            callback(true);
-                        }
-                        else {
-                            self.showError(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
-                            callback(false);
-                        }
-                    }
-            );
-        }
-        else {
-            logDebug("websocket failed because no connection to server");
+    this.getFreshIceConfig = function (callback) {
+      var dataToShip = {
+        msgType: "getIceConfig",
+        msgData: {},
+      };
+      if (!callback) {
+        callback = function () {};
+      }
+      if (self.webSocket) {
+        self.webSocket.emit("easyrtcCmd", dataToShip, function (ackMsg) {
+          if (ackMsg.msgType === "iceConfig") {
+            processIceConfig(ackMsg.msgData.iceConfig);
+            callback(true);
+          } else {
+            self.showError(ackMsg.msgData.errorCode, ackMsg.msgData.errorText);
+            callback(false);
+          }
+        });
+      } else {
+        logDebug("websocket failed because no connection to server");
 
-            throw "Attempt to send message without a valid connection to the server.";
-        }
+        throw "Attempt to send message without a valid connection to the server.";
+      }
     };
 
     /**
@@ -5551,60 +5835,74 @@ var Easyrtc = function() {
      * @param {Function} successCB called once, with a roomName as it's argument, once the room is joined.
      * @param {Function} failureCB called if the room can not be joined. The arguments of failureCB are errorCode, errorText, roomName.
      */
-    this.joinRoom = function(roomName, roomParameters, successCB, failureCB) {
-        if (self.roomJoin[roomName]) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Attempt to join room " + roomName + " which you are already in.");
-            return;
-        }
+    this.joinRoom = function (roomName, roomParameters, successCB, failureCB) {
+      if (self.roomJoin[roomName]) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to join room " + roomName + " which you are already in."
+        );
+        return;
+      }
 
-        var newRoomData = {roomName: roomName};
-        if (roomParameters) {
-            try {
-                JSON.stringify(roomParameters);
-            } catch (error) {
-                self.showError(self.errCodes.DEVELOPER_ERR, "non-jsonable parameter to easyrtc.joinRoom");
-                throw "Developer error, see application error messages";
-            }
-            var parameters = {};
-            for (var key in roomParameters) {
-                if (roomParameters.hasOwnProperty(key)) {
-                    parameters[key] = roomParameters[key];
-                }
-            }
-            newRoomData.roomParameter = parameters;
+      var newRoomData = { roomName: roomName };
+      if (roomParameters) {
+        try {
+          JSON.stringify(roomParameters);
+        } catch (error) {
+          self.showError(
+            self.errCodes.DEVELOPER_ERR,
+            "non-jsonable parameter to easyrtc.joinRoom"
+          );
+          throw "Developer error, see application error messages";
         }
-        var msgData = {
-            roomJoin: {}
+        var parameters = {};
+        for (var key in roomParameters) {
+          if (roomParameters.hasOwnProperty(key)) {
+            parameters[key] = roomParameters[key];
+          }
+        }
+        newRoomData.roomParameter = parameters;
+      }
+      var msgData = {
+        roomJoin: {},
+      };
+      var roomData;
+      var signallingSuccess, signallingFailure;
+      if (self.webSocket) {
+        msgData.roomJoin[roomName] = newRoomData;
+        signallingSuccess = function (msgType, msgData) {
+          roomData = msgData.roomData;
+          self.roomJoin[roomName] = newRoomData;
+          if (successCB) {
+            successCB(roomName);
+          }
+
+          processRoomData(roomData);
         };
-        var roomData;
-        var signallingSuccess, signallingFailure;
-        if (self.webSocket) {
-
-            msgData.roomJoin[roomName] = newRoomData;
-            signallingSuccess = function(msgType, msgData) {
-
-                roomData = msgData.roomData;
-                self.roomJoin[roomName] = newRoomData;
-                if (successCB) {
-                    successCB(roomName);
-                }
-
-                processRoomData(roomData);
-            };
-            signallingFailure = function(errorCode, errorText) {
-                if (failureCB) {
-                    failureCB(errorCode, errorText, roomName);
-                }
-                else {
-                    self.showError(errorCode, self.format(self.getConstantString("unableToEnterRoom"), roomName, errorText));
-                }
-            };
-            sendSignalling(null, "roomJoin", msgData, signallingSuccess, signallingFailure);
-        }
-        else {
-            self.roomJoin[roomName] = newRoomData;
-        }
-
+        signallingFailure = function (errorCode, errorText) {
+          if (failureCB) {
+            failureCB(errorCode, errorText, roomName);
+          } else {
+            self.showError(
+              errorCode,
+              self.format(
+                self.getConstantString("unableToEnterRoom"),
+                roomName,
+                errorText
+              )
+            );
+          }
+        };
+        sendSignalling(
+          null,
+          "roomJoin",
+          msgData,
+          signallingSuccess,
+          signallingFailure
+        );
+      } else {
+        self.roomJoin[roomName] = newRoomData;
+      }
     };
 
     /**
@@ -5618,48 +5916,50 @@ var Easyrtc = function() {
      *    easyrtc.leaveRoom("freds_room", function(roomName){ console.log("left the room")},
      *                       function(errorCode, errorText, roomName){ console.log("left the room")});
      */
-    this.leaveRoom = function(roomName, successCallback, failureCallback) {
-        var roomItem;
-        if (self.roomJoin[roomName]) {
-            if (!self.webSocket) {
-                delete self.roomJoin[roomName];
-            }
-            else {
+    this.leaveRoom = function (roomName, successCallback, failureCallback) {
+      var roomItem;
+      if (self.roomJoin[roomName]) {
+        if (!self.webSocket) {
+          delete self.roomJoin[roomName];
+        } else {
+          // Clear roomApiFields and roomApiFieldTimer
+          self.setRoomApiField(roomName);
 
-                // Clear roomApiFields and roomApiFieldTimer
-                self.setRoomApiField(roomName);
-
-                roomItem = {};
-                roomItem[roomName] = {roomName: roomName};
-                sendSignalling(null, "roomLeave", {roomLeave: roomItem},
-                function(msgType, msgData) {
-                    var roomData = msgData.roomData;
-                    processRoomData(roomData);
-                    if (successCallback) {
-                        successCallback(roomName);
-                    }
-                },
-                function(errorCode, errorText) {
-                    if (failureCallback) {
-                        failureCallback(errorCode, errorText, roomName);
-                    }
-                });
+          roomItem = {};
+          roomItem[roomName] = { roomName: roomName };
+          sendSignalling(
+            null,
+            "roomLeave",
+            { roomLeave: roomItem },
+            function (msgType, msgData) {
+              var roomData = msgData.roomData;
+              processRoomData(roomData);
+              if (successCallback) {
+                successCallback(roomName);
+              }
+            },
+            function (errorCode, errorText) {
+              if (failureCallback) {
+                failureCallback(errorCode, errorText, roomName);
+              }
             }
+          );
         }
+      }
     };
 
     /** Get a list of the rooms you are in. You must be connected to call this function.
      * @returns {Object} A map whose keys are the room names
      */
-    this.getRoomsJoined = function() {
-        var roomsIn = {};
-        var key;
-        for (key in self.roomJoin) {
-            if (self.roomJoin.hasOwnProperty(key)) {
-                roomsIn[key] = true;
-            }
+    this.getRoomsJoined = function () {
+      var roomsIn = {};
+      var key;
+      for (key in self.roomJoin) {
+        if (self.roomJoin.hasOwnProperty(key)) {
+          roomsIn[key] = true;
         }
-        return roomsIn;
+      }
+      return roomsIn;
     };
 
     /** Get server defined fields associated with a particular room. Only valid
@@ -5668,25 +5968,26 @@ var Easyrtc = function() {
      * @returns {Object} A dictionary containing entries of the form {key:{'fieldName':key, 'fieldValue':value1}} or undefined
      * if you are not connected to the room.
      */
-    this.getRoomFields = function(roomName) {
-        return (!fields || !fields.rooms || !fields.rooms[roomName]) ?
-                    undefined : fields.rooms[roomName];
+    this.getRoomFields = function (roomName) {
+      return !fields || !fields.rooms || !fields.rooms[roomName]
+        ? undefined
+        : fields.rooms[roomName];
     };
 
     /** Get server defined fields associated with the current application. Only valid
      * after a connection has been made.
      * @returns {Object} A dictionary containing entries of the form {key:{'fieldName':key, 'fieldValue':value1}}
      */
-    this.getApplicationFields = function() {
-        return fields.application;
+    this.getApplicationFields = function () {
+      return fields.application;
     };
 
     /** Get server defined fields associated with the connection. Only valid
      * after a connection has been made.
      * @returns {Object} A dictionary containing entries of the form {key:{'fieldName':key, 'fieldValue':value1}}
      */
-    this.getConnectionFields = function() {
-        return fields.connection;
+    this.getConnectionFields = function () {
+      return fields.connection;
     };
 
     /**
@@ -5696,225 +5997,231 @@ var Easyrtc = function() {
      * close sockets that were supplied with easyrtc.useThisSocketConnection.
      * @param {Object} alreadyAllocatedSocketIo A value allocated with the connect method of socket.io.
      */
-    this.useThisSocketConnection = function(alreadyAllocatedSocketIo) {
-        preallocatedSocketIo = alreadyAllocatedSocketIo;
+    this.useThisSocketConnection = function (alreadyAllocatedSocketIo) {
+      preallocatedSocketIo = alreadyAllocatedSocketIo;
     };
 
     /** @private */
     function processToken(msg) {
-        var msgData = msg.msgData;
-        logDebug("entered process token");
+      var msgData = msg.msgData;
+      logDebug("entered process token");
 
-        if (msgData.easyrtcid) {
-            self.myEasyrtcid = msgData.easyrtcid;
+      if (msgData.easyrtcid) {
+        self.myEasyrtcid = msgData.easyrtcid;
+      }
+      if (msgData.field) {
+        fields.connection = msgData.field;
+      }
+      if (msgData.iceConfig) {
+        processIceConfig(msgData.iceConfig);
+      }
+      if (msgData.stillAliveInterval) {
+        stillAlivePeriod = msgData.stillAliveInterval;
+        if (stillAlivePeriod > 0) {
+          stillAliveEmitter();
         }
-        if (msgData.field) {
-            fields.connection = msgData.field;
-        }
-        if (msgData.iceConfig) {
-            processIceConfig(msgData.iceConfig);
-        }
-        if( msgData.stillAliveInterval ) {
-            stillAlivePeriod = msgData.stillAliveInterval;
-            if( stillAlivePeriod > 0 ) {
-               stillAliveEmitter();
-            }
-        }
+      }
 
-        if (msgData.sessionData) {
-            processSessionData(msgData.sessionData);
-        }
-        if (msgData.roomData) {
-            processRoomData(msgData.roomData);
-        }
-        if (msgData.application.field) {
-            fields.application = msgData.application.field;
-        }
+      if (msgData.sessionData) {
+        processSessionData(msgData.sessionData);
+      }
+      if (msgData.roomData) {
+        processRoomData(msgData.roomData);
+      }
+      if (msgData.application.field) {
+        fields.application = msgData.application.field;
+      }
     }
 
     /** @private */
     function sendAuthenticate(successCallback, errorCallback) {
-        //
-        // find our easyrtcsid
-        //
-        var cookies, target, i;
-        var easyrtcsid = null;
+      //
+      // find our easyrtcsid
+      //
+      var cookies, target, i;
+      var easyrtcsid = null;
 
-        if (self.cookieId && document.cookie) {
-            cookies = document.cookie.split(/[; ]/g);
-            target = self.cookieId + "=";
-            for (i = 0; i < cookies.length; i++) {
-                if (cookies[i].indexOf(target) === 0) {
-                    easyrtcsid = cookies[i].substring(target.length);
-                }
-            }
+      if (self.cookieId && document.cookie) {
+        cookies = document.cookie.split(/[; ]/g);
+        target = self.cookieId + "=";
+        for (i = 0; i < cookies.length; i++) {
+          if (cookies[i].indexOf(target) === 0) {
+            easyrtcsid = cookies[i].substring(target.length);
+          }
         }
+      }
 
-        var msgData = {
-            apiVersion: self.apiVersion,
-            applicationName: self.applicationName,
-            setUserCfg: collectConfigurationInfo(true)
+      var msgData = {
+        apiVersion: self.apiVersion,
+        applicationName: self.applicationName,
+        setUserCfg: collectConfigurationInfo(true),
+      };
+
+      if (!self.roomJoin) {
+        self.roomJoin = {};
+      }
+      if (self.presenceShow) {
+        msgData.setPresence = {
+          show: self.presenceShow,
+          status: self.presenceStatus,
         };
+      }
+      if (self.username) {
+        msgData.username = self.username;
+      }
+      if (self.roomJoin && !isEmptyObj(self.roomJoin)) {
+        msgData.roomJoin = self.roomJoin;
+      }
+      if (easyrtcsid) {
+        msgData.easyrtcsid = easyrtcsid;
+      }
+      if (credential) {
+        msgData.credential = credential;
+      }
 
-        if (!self.roomJoin) {
-            self.roomJoin = {};
-        }
-        if (self.presenceShow) {
-            msgData.setPresence = {
-                show: self.presenceShow,
-                status: self.presenceStatus
-            };
-        }
-        if (self.username) {
-            msgData.username = self.username;
-        }
-        if (self.roomJoin && !isEmptyObj(self.roomJoin)) {
-            msgData.roomJoin = self.roomJoin;
-        }
-        if (easyrtcsid) {
-            msgData.easyrtcsid = easyrtcsid;
-        }
-        if (credential) {
-            msgData.credential = credential;
-        }
-
-        if (self.webSocket) {
-            self.webSocket.json.emit(
-                "easyrtcAuth",
-                {
-                    msgType: "authenticate",
-                    msgData: msgData
-                },
-                function(msg) {
-                    var room;
-                    if (msg.msgType === "error") {
-                        errorCallback(msg.msgData.errorCode, msg.msgData.errorText);
-                        self.roomJoin = {};
-                    }
-                    else {
-                        processToken(msg);
-                        if (self._roomApiFields) {
-                            for (room in self._roomApiFields) {
-                                if (self._roomApiFields.hasOwnProperty(room)) {
-                                    enqueueSendRoomApi(room);
-                                }
-                            }
-                        }
-                        if (successCallback) {
-                            successCallback(self.myEasyrtcid);
-                        }
-                    }
+      if (self.webSocket) {
+        self.webSocket.emit(
+          "easyrtcAuth",
+          {
+            msgType: "authenticate",
+            msgData: msgData,
+          },
+          function (msg) {
+            var room;
+            if (msg.msgType === "error") {
+              errorCallback(msg.msgData.errorCode, msg.msgData.errorText);
+              self.roomJoin = {};
+            } else {
+              processToken(msg);
+              if (self._roomApiFields) {
+                for (room in self._roomApiFields) {
+                  if (self._roomApiFields.hasOwnProperty(room)) {
+                    enqueueSendRoomApi(room);
+                  }
                 }
-            );
-        }
-        else {
-            logDebug("websocket failed because no connection to server");
+              }
+              if (successCallback) {
+                successCallback(self.myEasyrtcid);
+              }
+            }
+          }
+        );
+      } else {
+        logDebug("websocket failed because no connection to server");
 
-            throw "Attempt to send message without a valid connection to the server.";
-        }
-
+        throw "Attempt to send message without a valid connection to the server.";
+      }
     }
 
     /** @private */
     function connectToWSServer(successCallback, errorCallback) {
-        var i;
-        if (preallocatedSocketIo) {
-            self.webSocket = preallocatedSocketIo;
+      var i;
+      if (preallocatedSocketIo) {
+        self.webSocket = preallocatedSocketIo;
+      } else if (!self.webSocket) {
+        try {
+          self.webSocket = io.connect(serverPath, connectionOptions);
+
+          if (!self.webSocket) {
+            throw "io.connect failed";
+          }
+        } catch (socketErr) {
+          self.webSocket = 0;
+          errorCallback(self.errCodes.SYSTEM_ERROR, socketErr.toString());
+
+          return;
         }
-        else if (!self.webSocket) {
-            try {
-               self.webSocket = io.connect(serverPath, connectionOptions);
-
-                if (!self.webSocket) {
-                    throw "io.connect failed";
-                }
-
-            } catch(socketErr) {
-                self.webSocket = 0;
-                errorCallback( self.errCodes.SYSTEM_ERROR, socketErr.toString());
-
-               return;
-            }
+      } else {
+        for (i in self.websocketListeners) {
+          if (!self.websocketListeners.hasOwnProperty(i)) {
+            continue;
+          }
+          self.webSocket.removeEventListener(
+            self.websocketListeners[i].event,
+            self.websocketListeners[i].handler
+          );
         }
-        else {
-            for (i in self.websocketListeners) {
-                if (!self.websocketListeners.hasOwnProperty(i)) {
-                    continue;
-                }
-                self.webSocket.removeEventListener(self.websocketListeners[i].event,
-                        self.websocketListeners[i].handler);
+      }
+
+      self.websocketListeners = [];
+
+      function addSocketListener(event, handler) {
+        self.webSocket.on(event, handler);
+        self.websocketListeners.push({ event: event, handler: handler });
+      }
+
+      addSocketListener("close", function (event) {
+        logDebug("the web socket closed");
+      });
+
+      addSocketListener("error", function (event) {
+        function handleErrorEvent() {
+          if (self.myEasyrtcid) {
+            //
+            // socket.io version 1 got rid of the socket member, moving everything up one level.
+            //
+            if (isSocketConnected(self.webSocket)) {
+              self.showError(
+                self.errCodes.SIGNAL_ERR,
+                self.getConstantString("miscSignalError")
+              );
+            } else {
+              /* socket server went down. this will generate a 'disconnect' event as well, so skip this event */
+              errorCallback(
+                self.errCodes.CONNECT_ERR,
+                self.getConstantString("noServer")
+              );
             }
+          } else {
+            errorCallback(
+              self.errCodes.CONNECT_ERR,
+              self.getConstantString("noServer")
+            );
+          }
         }
+        handleErrorEvent();
+      });
 
-        self.websocketListeners = [];
-
-        function addSocketListener(event, handler) {
-            self.webSocket.on(event, handler);
-            self.websocketListeners.push({event: event, handler: handler});
+      function connectHandler(event) {
+        if (!self.webSocket) {
+          self.showError(
+            self.errCodes.CONNECT_ERR,
+            self.getConstantString("badsocket")
+          );
         }
+        self.webSocketConnected = true;
+        missedAliveResponses = 0;
 
-        addSocketListener("close", function(event) {
-            logDebug("the web socket closed");
-        });
+        logDebug("saw socket-server onconnect event");
 
-        addSocketListener('error', function(event) {
-            function handleErrorEvent() {
-                if (self.myEasyrtcid) {
-                    //
-                    // socket.io version 1 got rid of the socket member, moving everything up one level.
-                    //
-                    if (isSocketConnected(self.webSocket)) {
-                        self.showError(self.errCodes.SIGNAL_ERR, self.getConstantString("miscSignalError"));
-                    }
-                    else {
-                        /* socket server went down. this will generate a 'disconnect' event as well, so skip this event */
-                        errorCallback(self.errCodes.CONNECT_ERR, self.getConstantString("noServer"));
-                    }
-                }
-                else {
-                    errorCallback(self.errCodes.CONNECT_ERR, self.getConstantString("noServer"));
-                }
-            }
-            handleErrorEvent();
-        });
-
-        function connectHandler(event) {
-            if (!self.webSocket) {
-                self.showError(self.errCodes.CONNECT_ERR, self.getConstantString("badsocket"));
-            }
-            self.webSocketConnected = true;
-            missedAliveResponses = 0;
-
-            logDebug("saw socket-server onconnect event");
-
-            if (self.webSocketConnected) {
-                sendAuthenticate( successCallback, errorCallback);
-            }
-            else {
-                errorCallback(self.errCodes.SIGNAL_ERR, self.getConstantString("icf"));
-            }
+        if (self.webSocketConnected) {
+          sendAuthenticate(successCallback, errorCallback);
+        } else {
+          errorCallback(
+            self.errCodes.SIGNAL_ERR,
+            self.getConstantString("icf")
+          );
         }
+      }
 
-        if (isSocketConnected(preallocatedSocketIo)) {
-            connectHandler(null);
+      if (isSocketConnected(preallocatedSocketIo)) {
+        connectHandler(null);
+      } else {
+        addSocketListener("connect", connectHandler);
+      }
+
+      addSocketListener("easyrtcMsg", onChannelMsg);
+      addSocketListener("easyrtcCmd", onChannelCmd);
+      addSocketListener("disconnect", function (/* code, reason, wasClean */) {
+        self.webSocketConnected = false;
+        updateConfigurationInfo = function () {}; // dummy update function
+        oldConfig = {};
+        disconnectBody();
+
+        if (self.disconnectListener) {
+          self.disconnectListener();
         }
-        else {
-            addSocketListener("connect", connectHandler);
-        }
-
-        addSocketListener("easyrtcMsg", onChannelMsg);
-        addSocketListener("easyrtcCmd", onChannelCmd);
-        addSocketListener("disconnect", function(/* code, reason, wasClean */) {
-
-            self.webSocketConnected = false;
-            updateConfigurationInfo = function() {}; // dummy update function
-            oldConfig = {};
-            disconnectBody();
-
-            if (self.disconnectListener) {
-                self.disconnectListener();
-            }
-        });
+      });
     }
 
     //
@@ -5923,24 +6230,25 @@ var Easyrtc = function() {
     // it is only invoked for peers that have sent us a supportHalfTrickIce message.
     //
     function checkIceGatheringState(otherPeer) {
-        logDebug("entered checkIceGatheringState");
-        if( peerConns[otherPeer] && peerConns[otherPeer].pc && peerConns[otherPeer].pc.iceGatheringState ) {
-           if( peerConns[otherPeer].pc.iceGatheringState === "complete" ) {
-               self.sendPeerMessage(otherPeer, "iceGatheringDone", {});
-               logDebug("sent iceGatherDone message to ", otherPeer);
-           }
-           else {
-               setTimeout( function() {
-                  checkIceGatheringState(otherPeer);
-               }, 500);
-           }
+      logDebug("entered checkIceGatheringState");
+      if (
+        peerConns[otherPeer] &&
+        peerConns[otherPeer].pc &&
+        peerConns[otherPeer].pc.iceGatheringState
+      ) {
+        if (peerConns[otherPeer].pc.iceGatheringState === "complete") {
+          self.sendPeerMessage(otherPeer, "iceGatheringDone", {});
+          logDebug("sent iceGatherDone message to ", otherPeer);
+        } else {
+          setTimeout(function () {
+            checkIceGatheringState(otherPeer);
+          }, 500);
         }
-        else {
-           logDebug("checkIceGatherState: leaving");
-           // peer left, ignore
-        }
+      } else {
+        logDebug("checkIceGatherState: leaving");
+        // peer left, ignore
+      }
     }
-
 
     /**
      * Connects to the EasyRTC signaling server. You must connect before trying to
@@ -5963,49 +6271,56 @@ var Easyrtc = function() {
      *                       console.log("failed to connect ", erFrText);
      *                   });
      */
-    this.connect = function(applicationName, successCallback, errorCallback) {
+    this.connect = function (applicationName, successCallback, errorCallback) {
+      // Detect invalid or missing socket.io
+      if (!io) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Your HTML has not included the socket.io.js library"
+        );
+      }
 
-        // Detect invalid or missing socket.io
-        if (!io) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Your HTML has not included the socket.io.js library");
-        }
+      if (!preallocatedSocketIo && self.webSocket) {
+        self.showError(
+          self.errCodes.DEVELOPER_ERR,
+          "Attempt to connect when already connected to socket server"
+        );
+        return;
+      }
+      pc_ice_config = {};
+      closedChannel = null;
+      oldConfig = {}; // used internally by updateConfiguration
+      queuedMessages = {};
+      self.applicationName = applicationName;
+      fields = {
+        rooms: {},
+        application: {},
+        connection: {},
+      };
 
-        if (!preallocatedSocketIo && self.webSocket) {
-            self.showError(self.errCodes.DEVELOPER_ERR, "Attempt to connect when already connected to socket server");
-            return;
-        }
-        pc_ice_config = {};
-        closedChannel = null;
-        oldConfig = {}; // used internally by updateConfiguration
-        queuedMessages = {};
-        self.applicationName = applicationName;
-        fields = {
-            rooms: {},
-            application: {},
-            connection: {}
+      logDebug(
+        "attempt to connect to WebRTC signalling server with application name=" +
+          applicationName
+      );
+
+      if (errorCallback === null) {
+        errorCallback = function (errorCode, errorText) {
+          self.showError(errorCode, errorText);
         };
+      }
 
-        logDebug("attempt to connect to WebRTC signalling server with application name=" + applicationName);
-
-        if (errorCallback === null) {
-            errorCallback = function(errorCode, errorText) {
-                self.showError(errorCode, errorText);
-            };
+      self.setPeerListener(function (easyrtcid, msgType, msgData, targeting) {
+        logDebug("received request to supportHalfIceTrickle");
+        if (peerConns[easyrtcid]) {
+          peerConns[easyrtcid].supportHalfTrickleIce = true;
+          flushCachedCandidates(easyrtcid);
+          checkIceGatheringState(easyrtcid);
         }
+      }, "supportHalfTrickleIce");
 
-        self.setPeerListener(function(easyrtcid, msgType, msgData, targeting){
-             logDebug("received request to supportHalfIceTrickle");
-             if( peerConns[easyrtcid] ) {
-                peerConns[easyrtcid].supportHalfTrickleIce = true;
-                flushCachedCandidates(easyrtcid);
-                checkIceGatheringState(easyrtcid);
-             }
-        }, "supportHalfTrickleIce");
-
-        connectToWSServer(successCallback, errorCallback);
+      connectToWSServer(successCallback, errorCallback);
     };
-};
+  };
 
-return new Easyrtc();
-
-}));
+  return new Easyrtc();
+});
